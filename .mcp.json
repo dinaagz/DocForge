@@ -1,0 +1,26 @@
+{
+  "_comment": "MCP server configuration for document processing loop",
+  "mcpServers": {
+    "filesystem": {
+      "_status": "OPTIONAL",
+      "_description": "Local filesystem access for document manipulation",
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-filesystem"],
+      "env": {
+        "ALLOWED_DIRS": "./input,./output,./work,./state"
+      }
+    },
+    "github": {
+      "_status": "OPTIONAL",
+      "_description": "GitHub integration for version control workflows",
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-github"]
+    }
+  },
+  "_notes": [
+    "The framework works entirely without external MCP connectors.",
+    "All document processing uses local Python scripts.",
+    "Add connectors here as they become available.",
+    "Mark new connectors as OPTIONAL or REQUIRED."
+  ]
+}

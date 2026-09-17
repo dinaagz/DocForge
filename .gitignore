@@ -1,0 +1,50 @@
+# User documents (potentially sensitive)
+input/*.docx
+input/*.pdf
+input/*.doc
+
+# Working files
+work/inspection/*
+work/chapters/*
+work/qa/*
+work/assembled/*
+!work/**/.gitkeep
+
+# Output files
+output/*.docx
+output/*.pdf
+output/*.md
+!output/.gitkeep
+
+# State files (contain document-specific data)
+state/*.json
+!state/loop_state.example.json
+
+# Logs
+logs/*.log
+logs/*.jsonl
+
+# Lock files
+state/.loop.lock
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

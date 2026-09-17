@@ -1,0 +1,85 @@
+# ============================================================
+# Document Processing Configuration
+# ============================================================
+# This file controls all parameters for the agentic document
+# processing loop. Modify values here — never hard-code them
+# in scripts or skills.
+# ============================================================
+
+document:
+  name: "Memoire_Fin_d_année.docx"
+  type: "mémoire de fin d'année, projet scolaire"
+  approximate_pages: 162
+
+processing:
+  max_quality_iterations: 5
+  global_quality_loop: true
+  continue_on_failure: true
+  # Timeout per chapter processing step (seconds)
+  step_timeout: 600
+  # Lock file to prevent concurrent loops
+  lock_file: "state/.loop.lock"
+
+text:
+  preserve_body: true
+  allow_reformulation: false
+  allow_content_movement: false
+  allow_content_deletion: false
+  allow_content_addition: false
+
+language:
+  locale: "fr_FR"
+  auto_correction:
+    - spelling
+    - grammar
+    - conjugation
+    - punctuation
+    - french_typography
+    - nbsp
+    - french_quotes
+    - dashes
+
+formatting:
+  font:
+    family: "Times New Roman"
+    size: 12
+
+  paragraph:
+    alignment: "justify"
+    line_spacing: 1.25
+
+  margins:
+    top_cm: 2.5
+    bottom_cm: 2.5
+    left_cm: 2.5
+    right_cm: 2.5
+
+headings:
+  heading_1:
+    size: 16
+    bold: false
+    page_break_before: true
+
+  heading_2:
+    size: 14
+    bold: false
+    page_break_before: false
+
+  heading_3:
+    size: 12
+    bold: true
+    page_break_before: false
+
+pagination:
+  alignment: "center"
+  position: "footer"
+  exclude_first_page: true
+
+toc:
+  automatic: true
+  levels: 3
+
+output:
+  docx: true
+  pdf: true
+  report: true

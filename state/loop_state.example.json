@@ -1,0 +1,14 @@
+{
+  "workflow": "academic-document-processing",
+  "status": "PROCESSING",
+  "current_phase": "CHAPTER_PROCESSING",
+  "current_chapter": "CH03",
+  "last_successful_step": "LANGUAGE_QA",
+  "last_error": null,
+  "iteration": 2,
+  "global_iteration": 0,
+  "updated_at": "2025-01-15T10:30:00+00:00",
+  "resume_required": false,
+  "agent_action": null,
+  "_comment": "Example state file. Real state files are gitignored."
+}
