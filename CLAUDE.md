@@ -37,13 +37,32 @@ INIT → INSPECTION → STRUCTURE_ANALYSIS → WAITING_FOR_HUMAN_VALIDATION
 → NEXT_CHAPTER → ASSEMBLY → GLOBAL_QA → EXPORT → FINAL_REPORT → DONE
 ```
 
+## Structure Analysis = REAL Restructuring
+
+The STRUCTURE_ANALYSIS phase does NOT just extract existing headings. It:
+1. Extracts raw data (headings, paragraph content, anomalies) via `extract_structure.py`
+2. **Invokes the structure-analyst agent** to propose a COMPLETE RESTRUCTURING
+3. The agent analyzes document CONTENT and proposes new chapter boundaries
+4. The existing numbering and heading styles are IGNORED — structure is rebuilt from scratch
+5. The restructuring proposal goes to WAITING_FOR_HUMAN_VALIDATION
+
+When running in Claude Code, Claude should automatically invoke the structure-analyst
+agent when `state/structure_proposal.json` has `needs_agent_analysis: true`.
+
+## Autonomous Execution
+
+The loop runs autonomously from INIT to DONE with ONE pause:
+- **WAITING_FOR_HUMAN_VALIDATION**: The human reviews the restructuring proposal
+- Everything else (formatting, QA, corrections, assembly, export) runs without intervention
+- QA checks run inline via Python scripts, auto-correct on failure, max 5 iterations per chapter
+
 ## Commands
 
 ```bash
 ./run.sh status     # Show current state
-./run.sh run        # Execute one step
-./run.sh resume     # Resume from last state
-./run.sh validate   # Validate structure proposal
+./run.sh run        # Run autonomously (stops only for human validation)
+./run.sh resume     # Alias for run
+./run.sh validate   # Validate restructuring proposal
 ./run.sh loop       # Continuous heartbeat
 ./run.sh reset --force  # Reset workflow
 ```
@@ -51,10 +70,11 @@ INIT → INSPECTION → STRUCTURE_ANALYSIS → WAITING_FOR_HUMAN_VALIDATION
 ## Working With This System
 
 - Place the input DOCX in `input/`
-- Run `./run.sh run` to start
-- When state reaches WAITING_FOR_HUMAN_VALIDATION, review `work/inspection/structure_proposal.md`
-- Run `./run.sh validate` to approve the structure
-- Continue with `./run.sh run` or `./run.sh loop`
+- Run `./run.sh run` to start — the loop runs autonomously to WAITING_FOR_HUMAN_VALIDATION
+- The structure-analyst agent proposes a complete restructuring (not a mirror of existing structure)
+- Review the restructuring proposal in `work/inspection/structure_proposal.md`
+- Run `./run.sh validate` to approve the restructuring
+- Run `./run.sh run` again — the loop runs autonomously to DONE
 - Check status anytime with `./run.sh status`
 
 ## Adding New Skills

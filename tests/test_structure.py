@@ -41,4 +41,4 @@ def test_markdown_report(sample_docx, tmp_path):
     assert md_path.exists()
     content = md_path.read_text()
     assert "Structure Extraction Report" in content
-    assert "Detected Sections" in content
+    assert "Existing Sections" in content
