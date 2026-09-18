@@ -1,26 +1,24 @@
 {
-  "_comment": "MCP server configuration for document processing loop",
+  "_comment": "MCP servers — OPTIONNEL. DocForge fonctionne sans MCP.",
+  "_notes": [
+    "Le cœur DocForge ne dépend pas de MCP.",
+    "Ce fichier reste pour la compatibilité avec Claude Code.",
+    "Le manifeste neutre des connecteurs est dans .docforge/connectors/manifest.yaml.",
+    "Les connecteurs marqués OPTIONAL peuvent être absents sans blocage."
+  ],
   "mcpServers": {
     "filesystem": {
       "_status": "OPTIONAL",
-      "_description": "Local filesystem access for document manipulation",
+      "_description": "Filesystem MCP (facultatif — DocForge accède au FS localement).",
       "command": "npx",
-      "args": ["-y", "@anthropic/mcp-filesystem"],
-      "env": {
-        "ALLOWED_DIRS": "./input,./output,./work,./state"
-      }
+      "args": ["-y", "@modelcontextprotocol/server-filesystem"],
+      "env": {"ALLOWED_DIRS": "./input,./output,./work,./state,./.docforge"}
     },
     "github": {
       "_status": "OPTIONAL",
-      "_description": "GitHub integration for version control workflows",
+      "_description": "GitHub MCP (facultatif — le CLI git suffit).",
       "command": "npx",
-      "args": ["-y", "@anthropic/mcp-github"]
+      "args": ["-y", "@modelcontextprotocol/server-github"]
     }
-  },
-  "_notes": [
-    "The framework works entirely without external MCP connectors.",
-    "All document processing uses local Python scripts.",
-    "Add connectors here as they become available.",
-    "Mark new connectors as OPTIONAL or REQUIRED."
-  ]
+  }
 }

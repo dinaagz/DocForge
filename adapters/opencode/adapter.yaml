@@ -1,0 +1,5 @@
+name: opencode
+runtime: opencode
+entrypoint: bin/docforge
+commands:
+  run: docforge run

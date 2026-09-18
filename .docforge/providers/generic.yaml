@@ -1,0 +1,10 @@
+name: generic
+mode: local
+capabilities:
+  - filesystem
+  - shell
+  - python
+  - parallel
+notes: |
+  Always available. Uses deterministic Python workers only. This is the
+  fallback for environments where no LLM CLI is installed.

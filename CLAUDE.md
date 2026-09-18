@@ -1,86 +1,83 @@
-# CLAUDE.md — Agentic Document Processing Loop
+# CLAUDE.md — DocForge (Claude Code adapter)
 
-## System Rules (always enforced)
+Ce fichier oriente Claude Code lorsqu'il est utilisé comme runtime pour
+DocForge. La logique métier vit dans `docforge/` (Python) — ce fichier
+ne décrit que l'adaptation Claude Code.
 
-1. **Never rewrite a long document entirely.** All modifications are targeted, traceable, and reversible.
-2. **Always use persistent state.** The truth is in `state/*.json`, never in conversation memory.
-3. **Always log modifications.** Every change is recorded in `state/corrections.json` and `logs/events.jsonl`.
-4. **Always use stable IDs.** Paragraphs are identified as P000001, P000002, etc. with SHA-256 hashes.
-5. **Separate production from validation.** The agent that modifies content is NEVER its own quality controller.
-6. **Never auto-validate human decisions.** Structure proposals require explicit human validation before proceeding.
-7. **Never modify substantive content without authorization.** Only formatting, typography, and logged language corrections are allowed.
-8. **Respect the 5-iteration limit.** After 5 QA failures on a chapter, mark it PENDING_MANUAL and move on.
-9. **Local errors don't stop the pipeline.** A chapter failure does not block other chapters.
-10. **Always support resumption.** The system must be restart-safe — state is saved after every significant step.
-11. **Always produce a report.** The final quality report is generated in `output/rapport_qualite.md`.
-12. **LLM output is not proof of integrity.** Always verify with deterministic scripts (compare_docx, check_unicode, validate_layout).
+## Identité du projet
 
-## Architecture Overview
+- Nom : **DocForge** (anciennement « Loop »).
+- Commande principale : `docforge` (via `bin/docforge`).
+- Rôle : moteur autonome multi-agents de reconstruction, correction,
+  mise en forme et contrôle qualité documentaire.
+
+## Règles système (toujours applicables)
+
+1. Ne jamais réécrire un long document entièrement.
+2. Utiliser un état persistant (`.docforge/state/`).
+3. Journaliser (`.docforge/memory/events.jsonl`).
+4. Utiliser des IDs stables (P000001…) + SHA-256.
+5. Séparer builders et verifiers.
+6. Le workflow ne pause plus pour attendre une validation humaine :
+   il s'exécute jusqu'à DONE, DONE_WITH_REVIEW_ITEMS, BLOCKED ou
+   FAILED_SYSTEM. Les décisions incertaines sont écrites dans
+   `.docforge/state/manual_review.json`.
+7. Ne jamais modifier un contenu sans traçabilité.
+8. Après 5 échecs locaux → `PENDING_MANUAL`, on passe au suivant.
+9. Un échec local ne bloque pas la boucle.
+10. La sortie doit être reproductible depuis le state.
+11. Rapport final toujours produit (`output/DOCFORGE_REPORT.md`).
+12. La sortie IA n'est jamais une preuve : les verifiers déterministes
+    ont le dernier mot.
+
+## Architecture
 
 ```
-input/         → Source DOCX
-scripts/       → Deterministic Python tools (inspect, compare, format, merge, export)
-.claude/agents → Specialized sub-agents (inspector, analyst, reviewer, verifier, etc.)
-.claude/skills → Business rules for each processing phase
-config/        → document_config.yaml (formatting rules, processing parameters)
-state/         → Persistent state files (loop_state, chapter_status, corrections, etc.)
-logs/          → Event journal (events.jsonl) and error logs
-work/          → Working files (inspection, chapters, qa, assembled)
-output/        → Final deliverables (DOCX, PDF, quality report)
+.docforge/         état persistant, config, modèle canonique, mémoire, chat
+docforge/          cœur Python agnostique (Planner/Manager/Controller/…)
+docforge/providers/ adapters (claude-code, codex, gemini, cursor, qwen, opencode, generic)
+docforge/workers/   builders + verifiers déterministes
+adapters/          adaptateurs plateforme (mince)
+scripts/           scripts déterministes DOCX/PDF (réutilisés)
+.claude/           agents + skills Claude Code (adaptateur legacy)
+input/ work/ output/ logs/
+bin/docforge       exécutable
+run.sh             wrapper LEGACY vers docforge
+DOCFORGE.md AGENTS.md LOOP.yaml  protocole portable (mode chat)
 ```
 
-## State Machine
+## Boucle DocForge
 
 ```
-INIT → INSPECTION → STRUCTURE_ANALYSIS → WAITING_FOR_HUMAN_VALIDATION
-→ STRUCTURE_LOCKED → CHAPTER_PROCESSING → CHAPTER_QA → CHAPTER_VALIDATED
-→ NEXT_CHAPTER → ASSEMBLY → GLOBAL_QA → EXPORT → FINAL_REPORT → DONE
+PLAN → BUILD → VERIFY → MEMORY → CONTROL → REPLAN
 ```
 
-## Structure Analysis = REAL Restructuring
+Autonome. Aucune pause humaine.
 
-The STRUCTURE_ANALYSIS phase does NOT just extract existing headings. It:
-1. Extracts raw data (headings, paragraph content, anomalies) via `extract_structure.py`
-2. **Invokes the structure-analyst agent** to propose a COMPLETE RESTRUCTURING
-3. The agent analyzes document CONTENT and proposes new chapter boundaries
-4. The existing numbering and heading styles are IGNORED — structure is rebuilt from scratch
-5. The restructuring proposal goes to WAITING_FOR_HUMAN_VALIDATION
-
-When running in Claude Code, Claude should automatically invoke the structure-analyst
-agent when `state/structure_proposal.json` has `needs_agent_analysis: true`.
-
-## Autonomous Execution
-
-The loop runs autonomously from INIT to DONE with ONE pause:
-- **WAITING_FOR_HUMAN_VALIDATION**: The human reviews the restructuring proposal
-- Everything else (formatting, QA, corrections, assembly, export) runs without intervention
-- QA checks run inline via Python scripts, auto-correct on failure, max 5 iterations per chapter
-
-## Commands
+## Commandes
 
 ```bash
-./run.sh status     # Show current state
-./run.sh run        # Run autonomously (stops only for human validation)
-./run.sh resume     # Alias for run
-./run.sh validate   # Validate restructuring proposal
-./run.sh loop       # Continuous heartbeat
-./run.sh reset --force  # Reset workflow
+docforge init | doctor | providers | workers | run | status | audit
+docforge report | resume | pause | stop | reset --force
 ```
 
-## Working With This System
+Le wrapper legacy `./run.sh` reste disponible pendant la migration.
 
-- Place the input DOCX in `input/`
-- Run `./run.sh run` to start — the loop runs autonomously to WAITING_FOR_HUMAN_VALIDATION
-- The structure-analyst agent proposes a complete restructuring (not a mirror of existing structure)
-- Review the restructuring proposal in `work/inspection/structure_proposal.md`
-- Run `./run.sh validate` to approve the restructuring
-- Run `./run.sh run` again — the loop runs autonomously to DONE
-- Check status anytime with `./run.sh status`
+## Adaptation Claude Code
 
-## Adding New Skills
+- Les fichiers `.claude/agents/*.md` restent en place comme documentation
+  agent lisible par Claude Code.
+- Les fichiers `.claude/skills/*` restent en place.
+- La logique n'est plus dans `.claude/` : elle est dans `docforge/`.
 
-Create `.claude/skills/<skill-name>/SKILL.md` with trigger conditions, process steps, and rules.
+## Ajouter un agent
 
-## Adding New Agents
+1. `.docforge/agents/<name>.md` (description + rôle).
+2. Enregistrer un worker Python dans `docforge/workers/` via `register`.
+3. Optionnel : `.claude/agents/<name>.md` si l'agent doit être invocable
+   depuis Claude Code interactif.
 
-Create `.claude/agents/<agent-name>.md` with frontmatter (name, description, model, tools) and instructions.
+## Ajouter un skill
+
+1. `.docforge/skills/<name>/SKILL.md` avec triggers + règles.
+2. Réutiliser via `docforge/workers/` si besoin.

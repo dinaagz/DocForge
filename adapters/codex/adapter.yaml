@@ -1,0 +1,8 @@
+name: codex
+runtime: codex-cli
+entrypoint: bin/docforge
+commands:
+  run: docforge run
+notes: |
+  Si le CLI Codex n'est pas disponible, DocForge bascule automatiquement
+  sur l'adaptateur generic.

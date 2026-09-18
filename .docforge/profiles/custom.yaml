@@ -1,0 +1,5 @@
+# Modèle libre : dupliquez ce fichier et personnalisez-le, puis lancez
+# DOCFORGE_PROFILE=custom docforge run
+style:
+  language: fr
+  tone: personnalisable

@@ -1,0 +1,8 @@
+style:
+  language: fr
+  tone: précis
+  voice: technique
+  formality: moyenne
+  audience: ingénieurs
+formatting:
+  font: {family: "Source Sans Pro", size: 11}

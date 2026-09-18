@@ -1,0 +1,9 @@
+name: claude-code
+mode: code
+command: claude
+capabilities: [filesystem, shell, agents, parallel_agents, background]
+adapter: adapters/claude-code
+notes: |
+  Claude Code CLI. When present, DocForge can dispatch agent-shaped
+  work through it while still keeping the deterministic worker set as
+  the ground truth.

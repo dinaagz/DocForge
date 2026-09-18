@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DocForge Canonical Document",
+  "type": "object",
+  "required": ["metadata", "chapters", "paragraphs"],
+  "properties": {
+    "metadata": {"type": "object"},
+    "language": {"type": "string"},
+    "document_type": {"type": "string"},
+    "style_profile": {"type": "string"},
+    "front_matter": {"type": "array"},
+    "chapters": {"type": "array"},
+    "paragraphs": {"type": "array"},
+    "figures": {"type": "array"},
+    "tables": {"type": "array"},
+    "equations": {"type": "array"},
+    "footnotes": {"type": "array"},
+    "citations": {"type": "array"},
+    "references": {"type": "array"},
+    "bibliography": {"type": "array"},
+    "appendices": {"type": "array"},
+    "cross_references": {"type": "array"},
+    "issues": {"type": "array"},
+    "corrections": {"type": "array"}
+  }
+}

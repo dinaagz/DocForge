@@ -1,0 +1,9 @@
+providers:
+  preferred:
+    - claude-code
+    - codex
+    - gemini
+    - cursor
+    - qwen
+    - opencode
+    - generic
