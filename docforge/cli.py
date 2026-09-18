@@ -35,18 +35,27 @@ def cmd_init(_: argparse.Namespace) -> int:
 
 
 def _seed_default_configs() -> None:
-    (DOCFORGE_DIR / "profiles" / "academic.yaml").write_text(
-        "style:\n  language: fr\n  tone: professionnel\n  voice: académique\n"
-        "  personality: neutre\n  formality: élevée\n  audience: universitaire\n"
-        "  preserve_author_voice: true\nprocessing:\n  concurrency: 4\n",
-        encoding="utf-8")
-    (DOCFORGE_DIR / "profiles" / "corporate.yaml").write_text(
-        "style:\n  language: fr\n  tone: professionnel\n  voice: institutionnel\n"
-        "  formality: élevée\n  audience: dirigeants\n",
-        encoding="utf-8")
-    (DOCFORGE_DIR / "profiles" / "minimal.yaml").write_text(
-        "style:\n  language: fr\n  tone: neutre\n  formality: moyenne\n",
-        encoding="utf-8")
+    # Only create profiles that are missing — never overwrite user edits.
+    seeds = {
+        "academic.yaml": (
+            "style:\n  language: fr\n  tone: professionnel\n  voice: académique\n"
+            "  personality: neutre\n  formality: élevée\n  audience: universitaire\n"
+            "  preserve_author_voice: true\nprocessing:\n  concurrency: 4\n"
+        ),
+        "corporate.yaml": (
+            "style:\n  language: fr\n  tone: professionnel\n  voice: institutionnel\n"
+            "  formality: élevée\n  audience: dirigeants\n"
+        ),
+        "minimal.yaml": (
+            "style:\n  language: fr\n  tone: neutre\n  formality: moyenne\n"
+        ),
+    }
+    prof_dir = DOCFORGE_DIR / "profiles"
+    prof_dir.mkdir(parents=True, exist_ok=True)
+    for name, body in seeds.items():
+        p = prof_dir / name
+        if not p.exists():
+            p.write_text(body, encoding="utf-8")
 
 
 def cmd_status(_: argparse.Namespace) -> int:
