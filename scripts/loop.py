@@ -576,12 +576,11 @@ def step_next_chapter(state: Dict[str, Any]) -> Dict[str, Any]:
 
 def step_assembly(state: Dict[str, Any]) -> Dict[str, Any]:
     """Run merge and formatting on assembled document."""
+    cfg = load_config()
+    merged = WORK_DIR / "assembled" / "merged.docx"
     rc, out, err = run_script("merge_docx.py")
-    if rc != 0:
-        # If merge fails, try using the structured doc directly
-        cfg = load_config()
+    if rc != 0 or not merged.exists():
         structured = WORK_DIR / "assembled" / f"structured_{cfg['document']['name']}"
-        merged = WORK_DIR / "assembled" / "merged.docx"
         if structured.exists():
             shutil.copy2(str(structured), str(merged))
             logger.info("Using structured doc as assembled (merge had no chapter files)")

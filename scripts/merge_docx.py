@@ -94,6 +94,10 @@ def main() -> int:
         # Fallback: glob sorted
         chapter_files = sorted(chapters_dir.glob("*.docx"))
 
+    if not chapter_files:
+        logger.error("No chapter files found in %s", chapters_dir)
+        return 1
+
     out = Path(args.output)
     total = merge_chapters(chapter_files, out)
 

@@ -34,17 +34,19 @@ def compare(original: Document, modified: Document) -> Dict[str, Any]:
         pid = paragraph_id(i)
 
         if i >= len(orig_paras):
+            added_text = mod_paras[i][0].strip()
             diffs.append({
                 "id": pid, "type": "ADDED",
-                "classification": "UNAUTHORIZED",
+                "classification": "AUTHORIZED_STRUCTURAL" if not added_text else "UNAUTHORIZED",
                 "modified_text": mod_paras[i][0][:200],
             })
             continue
 
         if i >= len(mod_paras):
+            deleted_text = orig_paras[i][0].strip()
             diffs.append({
                 "id": pid, "type": "DELETED",
-                "classification": "UNAUTHORIZED",
+                "classification": "AUTHORIZED_STRUCTURAL" if not deleted_text else "UNAUTHORIZED",
                 "original_text": orig_paras[i][0][:200],
             })
             continue
