@@ -1,0 +1,5 @@
+name: gemini
+mode: code
+command: gemini
+capabilities: [filesystem, shell, agents]
+adapter: adapters/gemini

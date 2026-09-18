@@ -1,0 +1,18 @@
+# DocForge connectors — OPTIONAL. The core works without them.
+# MCP is one possible provider config, never a requirement.
+connectors:
+  - name: filesystem
+    type: local
+    required: true
+  - name: docx
+    type: python-docx
+    required: true
+  - name: pdf
+    type: libreoffice-or-pandoc
+    required: false
+  - name: git
+    type: local-cli
+    required: false
+  - name: github
+    type: mcp-optional
+    required: false

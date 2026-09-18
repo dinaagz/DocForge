@@ -1,0 +1,10 @@
+quality:
+  checks:
+    - integrity
+    - unicode
+    - layout
+    - structure
+    - coherence
+    - pdf_visual
+  local_iterations_max: 5
+  global_iterations_max: 5

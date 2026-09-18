@@ -1,0 +1,15 @@
+language:
+  default: fr
+  auto_detect: true
+  locale: fr-FR
+  corrections:
+    - orthographe
+    - accents
+    - grammaire
+    - conjugaison
+    - syntaxe
+    - ponctuation
+    - typographie_française
+    - guillemets
+    - tirets
+    - espaces_insécables

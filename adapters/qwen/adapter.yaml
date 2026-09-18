@@ -1,0 +1,5 @@
+name: qwen
+runtime: qwen-code
+entrypoint: bin/docforge
+commands:
+  run: docforge run

@@ -1,0 +1,3 @@
+# Bridge vers la configuration héritée (config/document_config.yaml).
+# Vide par défaut : DocForge utilise l'ancien fichier automatiquement.
+document: {}

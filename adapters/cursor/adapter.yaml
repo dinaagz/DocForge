@@ -1,0 +1,5 @@
+name: cursor
+runtime: cursor-agent
+entrypoint: bin/docforge
+commands:
+  run: docforge run

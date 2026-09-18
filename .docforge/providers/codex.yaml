@@ -1,0 +1,5 @@
+name: codex
+mode: code
+command: codex
+capabilities: [filesystem, shell, agents]
+adapter: adapters/codex

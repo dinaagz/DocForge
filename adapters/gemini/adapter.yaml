@@ -1,0 +1,5 @@
+name: gemini
+runtime: gemini-cli
+entrypoint: bin/docforge
+commands:
+  run: docforge run

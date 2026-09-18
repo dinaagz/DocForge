@@ -1,190 +1,288 @@
-# Agentic Document Processing Loop
+# DOCFORGE
 
-A framework for processing long academic documents (DOCX/PDF) using an agentic loop with persistent state, iterative quality control, and mandatory human validation.
+**Moteur autonome multi-agents de reconstruction, correction, mise en
+forme et contrôle qualité documentaire.**
 
-## Features
+DocForge prend un document source (DOCX/PDF), en construit un **modèle
+canonique**, propose une **structure reconstruite**, applique des
+**corrections rédactionnelles** et une **mise en forme professionnelle**,
+puis produit un document final propre, un PDF audité et un **rapport
+complet en français** — sans intervention humaine intermédiaire.
 
-- **Persistent state machine** — survives interruptions, resumes automatically
-- **Chapter-by-chapter processing** — never processes the entire document at once
-- **Separation of concerns** — specialized agents for inspection, analysis, language, formatting, verification, and quality control
-- **Human-in-the-loop** — structure proposals require explicit validation
-- **Iterative QA** — up to 5 quality iterations per chapter, then escalates
-- **Document safety** — never modifies substantive content; all changes are logged and reversible
-- **Deterministic tools** — Python scripts handle all DOCX modifications; Claude handles analysis and decisions
+> Ce dépôt s'appelait auparavant **Loop**. Il a été migré vers
+> **DocForge** : nouveau cœur agnostique, orchestration multi-agents,
+> exécution parallèle, mode chat portable.
+
+---
+
+## Sommaire
+
+1. [Pourquoi DocForge](#pourquoi-docforge)
+2. [Architecture](#architecture)
+3. [Système multi-agents](#système-multi-agents)
+4. [Boucle récursive](#boucle-récursive)
+5. [Parallélisation](#parallélisation)
+6. [Mémoire persistante](#mémoire-persistante)
+7. [État système](#état-système)
+8. [Providers](#providers)
+9. [Mode code / mode chat](#mode-code--mode-chat)
+10. [Installation](#installation)
+11. [Commandes](#commandes)
+12. [Configuration](#configuration)
+13. [Profils documentaires](#profils-documentaires)
+14. [Traitement documentaire](#traitement-documentaire)
+15. [Exemples](#exemples)
+16. [Extension à un nouveau provider](#extension-à-un-nouveau-provider)
+17. [Dépannage](#dépannage)
+18. [Migration Loop → DocForge](#migration-loop--docforge)
+
+---
+
+## Pourquoi DocForge
+
+Corriger un mémoire, une thèse, un rapport de 200 pages est un travail
+que les outils actuels effectuent mal :
+
+- les modèles réécrivent tout et perdent la voix de l'auteur ;
+- ils inventent des chiffres, des citations, des dates ;
+- ils oublient la moitié du document ;
+- il n'y a ni traçabilité, ni rapport, ni rejeu possible.
+
+DocForge résout ce problème comme une **organisation numérique** : un
+planificateur, un gestionnaire, un contrôleur, une mémoire, et des
+dizaines d'agents spécialisés qui travaillent en parallèle sur des
+tâches indépendantes, avec vérification systématique par des agents
+distincts.
 
 ## Architecture
 
 ```
-project-root/
-├── .claude/
-│   ├── CLAUDE.md                    # System rules
-│   ├── agents/                      # Specialized sub-agents
-│   │   ├── document-inspector.md
-│   │   ├── structure-analyst.md
-│   │   ├── language-reviewer.md
-│   │   ├── formatting-specialist.md
-│   │   ├── integrity-verifier.md
-│   │   ├── quality-controller.md
-│   │   ├── assembler.md
-│   │   └── final-auditor.md
-│   └── skills/                      # Business rules
-│       ├── document-inspection/
-│       ├── structure-analysis/
-│       ├── language-quality/
-│       ├── docx-formatting/
-│       ├── integrity-validation/
-│       ├── chapter-processing/
-│       ├── quality-loop/
-│       ├── document-assembly/
-│       └── final-audit/
-├── config/
-│   └── document_config.yaml         # All processing parameters
-├── scripts/                         # Deterministic Python tools
-│   ├── loop.py                      # State machine engine
-│   ├── inspect_docx.py
-│   ├── extract_structure.py
-│   ├── apply_structure.py
-│   ├── apply_styles.py
-│   ├── language_diff.py
-│   ├── compare_docx.py
-│   ├── check_unicode.py
-│   ├── validate_layout.py
-│   ├── update_fields.py
-│   ├── merge_docx.py
-│   ├── export_pdf.py
-│   └── generate_report.py
-├── state/                           # Persistent state (JSON)
-├── logs/                            # Event journal + error logs
-├── input/                           # Place source DOCX here
-├── work/                            # Working files
-├── output/                          # Final deliverables
-├── run.sh                           # Heartbeat launcher
-└── requirements.txt
+                        ┌──────────────┐
+                        │  PLANIFICATEUR│
+                        └──────┬───────┘
+                               │
+                        ┌──────▼───────┐
+                        │  GESTIONNAIRE│
+                        └──────┬───────┘
+        ┌──────────┬──────────┼──────────┬──────────┐
+        ▼          ▼          ▼          ▼          ▼
+   EXTRACTION  STRUCTURE   LANGUE    COHÉRENCE   RÉFÉRENCES
+        │          │          │          │          │
+        └──────────┴──────────┼──────────┴──────────┘
+                              ▼
+                       ┌──────────────┐
+                       │ MODÈLE CANONIQUE│
+                       └──────┬───────┘
+                              ▼
+                       ┌──────────────┐
+                       │ RECONSTRUCTION│
+                       └──────┬───────┘
+                              ▼
+        ┌──────────┬──────────┼──────────┬──────────┐
+        ▼          ▼          ▼          ▼          ▼
+   INTEGRITY   FORMAT     LAYOUT   REFERENCES   PDF AUDIT
+        │          │          │          │          │
+        └──────────┴──────────┼──────────┴──────────┘
+                              ▼
+                       ┌──────────────┐
+                       │  CONTRÔLEUR   │
+                       └──────┬───────┘
+                              ▼
+                    PLAN → REPLAN → RECOMMENCE
 ```
+
+Arborescence :
+
+```
+DocForge/
+├── docforge/            # cœur agnostique (Python)
+│   ├── planner.py
+│   ├── manager.py
+│   ├── controller.py
+│   ├── scheduler.py
+│   ├── tasks.py
+│   ├── state.py
+│   ├── memory.py
+│   ├── canonical.py
+│   ├── orchestrator.py
+│   ├── report.py
+│   ├── capabilities.py
+│   ├── config.py
+│   ├── cli.py
+│   ├── providers/       # adapters d'exécution
+│   └── workers/         # builders + verifiers déterministes
+│
+├── .docforge/           # état persistant + configuration
+│   ├── config/
+│   ├── profiles/
+│   ├── providers/
+│   ├── connectors/
+│   ├── state/
+│   ├── memory/
+│   ├── model/           # canonical_document.json
+│   └── chat/            # mode chat portable
+│
+├── adapters/            # adaptateurs plateforme (claude, codex, ...)
+│
+├── .claude/             # legacy — agents/skills Claude Code
+├── scripts/             # scripts déterministes (DOCX/PDF) — réutilisés
+├── config/              # config héritée (compatibilité)
+├── input/  work/  output/  logs/
+├── bin/docforge         # exécutable
+├── docforge_cli.py      # exécutable Python (alt)
+├── run.sh               # wrapper LEGACY vers docforge
+├── install.sh install.ps1
+├── DOCFORGE.md AGENTS.md LOOP.yaml
+├── requirements.txt
+└── README.md
+```
+
+## Système multi-agents
+
+Trois familles :
+
+- **Gouvernance** : `planner`, `manager`, `controller`, `report-agent`.
+- **Builders** : `extractor`, `structure-architect`, `structure-applier`, `manifest-builder`, `formatting-agent`, `layout-agent`, `language-editor`, `style-editor`, `document-builder`, `assembler`, `exporter`.
+- **Verifiers** (jamais les mêmes que les builders — règle §5) : `integrity-verifier`, `content-verifier`, `format-verifier`, `layout-verifier`, `language-verifier`, `structure-verifier`, `reference-verifier`, `pdf-verifier`, `coherence-agent`.
+
+Voir `AGENTS.md` pour la liste complète.
+
+## Boucle récursive
+
+```
+PLAN → BUILD → VERIFY → MEMORY → CONTROL → REPLAN → …
+```
+
+Le Contrôleur détecte stagnation, oscillation, régression, agent bloqué,
+échec répété. Il ordonne un **REPLAN** au Planificateur, qui ajoute des
+tâches correctives ciblées. La boucle n'est **pas** une pipeline linéaire.
+
+## Parallélisation
+
+Le scheduler exécute plusieurs workers simultanément (par défaut 4).
+Les tâches indépendantes tournent réellement en parallèle. Un système
+de **resource locks** empêche deux agents de modifier la même ressource.
+Chaque tâche déclare ses `dependencies` et éventuellement ses
+`resource_locks`.
+
+## Mémoire persistante
+
+`\.docforge/memory/` conserve, en `jsonl`, toutes les :
+
+- **décisions** — quoi, pourquoi, quel agent.
+- **corrections** — cible, avant/après, raison.
+- **hypothèses** — texte, source, confiance.
+
+Le système peut répondre à :
+
+- « Pourquoi cette modification a-t-elle été faite ? »
+- « Quel agent l'a faite ? »
+- « Quel vérificateur l'a validée ? »
+
+## État système
+
+Un seul état canonique : `.docforge/state/`. La conversation IA n'est
+jamais la source de vérité.
+
+- `system.json` — statut global + itération.
+- `tasks.json` — file de tâches persistante.
+- `manual_review.json` — éléments laissés en revue humaine.
+- `.docforge/model/canonical_document.json` — modèle documentaire.
+- `.docforge/memory/events.jsonl` — journal d'événements.
+
+## Providers
+
+DocForge fonctionne avec n'importe quel provider :
+
+| Provider    | Statut     | Détection                |
+| ----------- | ---------- | ------------------------ |
+| claude-code | pris en charge | `claude` dans PATH   |
+| codex       | pris en charge | `codex` dans PATH    |
+| gemini      | pris en charge | `gemini` dans PATH   |
+| cursor      | pris en charge | `cursor-agent`       |
+| qwen        | pris en charge | `qwen` dans PATH     |
+| opencode    | pris en charge | `opencode` dans PATH |
+| generic     | toujours   | fallback local (Python)  |
+
+Le core ne contient jamais de `if claude:` — tout passe par
+`ProviderAdapter`. Un provider absent n'est pas une erreur : DocForge
+sélectionne automatiquement le suivant, en descendant jusqu'à `generic`.
+
+## Mode code / mode chat
+
+- **Mode code** — exécution réelle : threads, shell, filesystem, workers déterministes, boucle continue. C'est le mode par défaut.
+- **Mode chat** — portable, pour Claude Chat, ChatGPT, Gemini, Qwen, Kimi, Grok, etc. La plateforme n'exécute pas ; elle simule le protocole en tenant à jour `STATE.json` + `TASKS.json`. Voir `.docforge/chat/`.
+
+Nous n'affirmons **pas** qu'un chat sans exécution fournit un heartbeat
+ou une exécution parallèle réelle. Le mode chat exécute les tâches
+séquentiellement, une par tour.
 
 ## Installation
 
 ```bash
-pip3 install -r requirements.txt
+./install.sh                # POSIX
+# ou
+powershell -File install.ps1 # Windows
+
+export PATH="$PWD/bin:$PATH"
+
+docforge doctor              # vérifier l'environnement
+docforge init                # créer la structure
 ```
 
-LibreOffice is required for PDF export:
-```bash
-# Ubuntu/Debian
-sudo apt-get install libreoffice
-```
+Pré-requis : Python 3.9+, `python-docx`, `lxml`, `PyYAML`. LibreOffice
+ou Pandoc facultatif pour le PDF.
 
-## Quick Start
-
-1. **Place your document** in `input/`:
-   ```bash
-   cp your_document.docx input/Memoire_Fin_d_année.docx
-   ```
-
-2. **Configure** (optional): edit `config/document_config.yaml` to match your document name and formatting preferences.
-
-3. **Start the loop**:
-   ```bash
-   ./run.sh run
-   ```
-
-4. **Check status**:
-   ```bash
-   ./run.sh status
-   ```
-
-5. **When prompted for validation**: review `work/inspection/structure_proposal.md`, then:
-   ```bash
-   ./run.sh validate
-   ```
-
-6. **Continue processing**:
-   ```bash
-   ./run.sh run
-   # or for continuous processing:
-   ./run.sh loop
-   ```
-
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `./run.sh status` | Show current workflow state |
-| `./run.sh run` | Execute one step of the state machine |
-| `./run.sh run --steps 5` | Execute up to 5 steps |
-| `./run.sh resume` | Resume from last interrupted state |
-| `./run.sh validate` | Validate the proposed structure |
-| `./run.sh loop` | Continuous heartbeat until terminal state |
-| `./run.sh reset --force` | Reset workflow to initial state |
-| `./run.sh inspect` | Run document inspection only |
-| `./run.sh analyze` | Run structure analysis only |
-| `./run.sh assemble` | Assemble chapters only |
-| `./run.sh export` | Export DOCX + PDF only |
-| `./run.sh report` | Generate final quality report |
-
-## State Machine
-
-```
-INIT → INSPECTION → STRUCTURE_ANALYSIS → WAITING_FOR_HUMAN_VALIDATION
-    → STRUCTURE_LOCKED → CHAPTER_PROCESSING → CHAPTER_QA
-    → (iterate up to 5x) → CHAPTER_VALIDATED → NEXT_CHAPTER
-    → ASSEMBLY → GLOBAL_QA → EXPORT → FINAL_REPORT → DONE
-```
-
-### Failure handling
-
-- Chapter QA fails after 5 iterations → `PENDING_MANUAL` → continues with next chapter
-- Global QA fails after 5 iterations → `BLOCKED` → requires manual intervention
-- Any error → logged, state preserved, resumable
-
-## Resuming After Interruption
-
-The loop is fully restart-safe. State is saved in `state/loop_state.json` after every step.
+## Commandes
 
 ```bash
-# Process was interrupted after chapter 4?
-# It will resume at chapter 5:
-./run.sh resume
+docforge init         # initialise .docforge/
+docforge doctor       # audit environnement + providers
+docforge providers    # liste les providers disponibles
+docforge workers      # liste les workers/agents enregistrés
+docforge run          # exécute la boucle jusqu'à un état terminal
+docforge status       # affiche l'état courant
+docforge audit        # liste les tâches et leur statut
+docforge report       # regénère le rapport final
+docforge resume       # reprend depuis l'état sauvegardé
+docforge pause        # marque le système en pause
+docforge stop         # arrête (rejouable ensuite via resume)
+docforge reset --force  # remise à zéro complète
 ```
 
-## Persistent State Files
+L'ancienne interface `./run.sh …` reste disponible en mode LEGACY.
 
-| File | Purpose |
-|------|---------|
-| `state/loop_state.json` | Current phase, chapter, iteration |
-| `state/document_manifest.json` | Full paragraph inventory with IDs |
-| `state/structure_proposal.json` | Proposed heading hierarchy |
-| `state/structure_locked.json` | Validated (locked) structure |
-| `state/chapter_status.json` | Per-chapter processing status |
-| `state/corrections.json` | All language corrections applied |
-| `state/quality_log.json` | QA check results |
-| `state/validation_issues.json` | Integrity comparison results |
+## Configuration
 
-## Adding a New Skill
+Layer merge : valeurs par défaut → `.docforge/config/*.yaml` → profil
+(`.docforge/profiles/<name>.yaml`) → config héritée
+`config/document_config.yaml` → variables d'environnement.
 
-1. Create `.claude/skills/<skill-name>/SKILL.md`
-2. Define: trigger conditions, process steps, rules, output format
-3. The skill will be available to agents automatically
+Variables :
 
-## Adding a New Agent
+- `DOCFORGE_PROFILE=academic|corporate|technical|institutional|minimal|custom`
+- `DOCFORGE_CONCURRENCY=4`
 
-1. Create `.claude/agents/<agent-name>.md`
-2. Add frontmatter: name, description, model, tools
-3. Write instructions following the existing agent patterns
+## Profils documentaires
 
-## Adding a Connector
+`.docforge/profiles/` contient : `academic`, `corporate`, `technical`,
+`institutional`, `minimal`, `custom`. Chaque profil contrôle
+police/tailles/interligne/marges/style rédactionnel/audience/ton.
 
-1. Edit `.mcp.json` to add the MCP server configuration
-2. Mark as `OPTIONAL` if not required for core functionality
-3. The framework works without external connectors
+## Traitement documentaire
 
-## Troubleshooting
+1. Extraction paragraphes + inspection DOCX.
+2. Extraction de structure brute (headings existants ignorés en tant qu'autorité).
+3. Construction du **modèle canonique** (`canonical_document.json`).
+4. Analyses parallèles (langue, cohérence, structure).
+5. Reconstruction : structure verrouillée, mise en forme, assemblage.
+6. Vérifications parallèles (intégrité, format, langue, structure).
+7. Export DOCX + PDF.
+8. Audit visuel PDF.
+9. Rapport final français.
 
-- **"Lock already held"**: Another loop instance is running, or a previous run crashed. Wait 30 minutes for automatic lock release, or delete `state/.loop.lock`.
-- **"File not found"**: Ensure your DOCX is in `input/` and the filename matches `config/document_config.yaml`.
-- **Stuck in WAITING_FOR_HUMAN_VALIDATION**: Review the proposal and run `./run.sh validate`.
-- **Chapter PENDING_MANUAL**: Review `work/qa/<chapter_id>_report.json` for details.
-- **BLOCKED**: Review `state/quality_log.json` and `output/rapport_qualite.md` for global QA failures.
+Si une tâche échoue 5 fois, elle passe en `PENDING_MANUAL` et le
+workflow continue avec les autres.
 
 ## Document Craft
 
@@ -279,11 +377,51 @@ Le moteur adapte son traitement au type de document :
 5. **"Impeccable"** ≠ toutes les règles vertes — un document conforme peut être éditorialement faible
 6. **Chaque élément** doit avoir une fonction
 
-## Document Safety
+## Exemples
 
-The system follows strict safety rules:
-- Never rewrites document content
-- Only applies: formatting, typography, logged language corrections
-- All modifications are traceable via paragraph IDs and hashes
-- Original document is never modified (only copies in `work/`)
-- Integrity verification compares every paragraph before/after
+```bash
+# Traiter un document en profil académique avec 8 workers
+DOCFORGE_PROFILE=academic DOCFORGE_CONCURRENCY=8 docforge run
+
+# Reprendre après interruption
+docforge resume
+
+# Voir ce qui a été fait
+docforge audit
+docforge report
+```
+
+## Extension à un nouveau provider
+
+1. Ajouter `docforge/providers/<name>.py` implémentant `ProviderAdapter`.
+2. Ajouter `.docforge/providers/<name>.yaml` avec les capacités.
+3. Ajouter `adapters/<name>/adapter.yaml` (mince).
+4. Optionnel : `_registry.register(...)` dans `providers/__init__.py`.
+
+Le core reste inchangé.
+
+## Dépannage
+
+- **`docforge: command not found`** — `export PATH="$PWD/bin:$PATH"`.
+- **PDF non généré** — installez LibreOffice ou Pandoc.
+- **Tâches bloquées** — `docforge audit` puis `docforge reset --force`.
+- **Provider absent** — normal : `generic` prend le relais.
+
+## Migration Loop → DocForge
+
+Le repository GitHub doit être renommé de `dinaagz/Loop` en
+`dinaagz/DocForge` (ou `dinaagz/docforge` si GitHub normalise). La
+commande recommandée :
+
+```bash
+gh repo rename DocForge --repo dinaagz/Loop
+# puis dans une copie locale :
+git remote set-url origin https://github.com/dinaagz/DocForge.git
+```
+
+Statut de renommage : **à effectuer côté GitHub** — voir la section
+« Statut du renommage GitHub » dans le rapport final.
+
+---
+
+_DocForge — 2026._
