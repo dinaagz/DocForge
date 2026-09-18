@@ -79,6 +79,31 @@ toc:
   automatic: true
   levels: 3
 
+craft:
+  enabled: true
+  phases:
+    taste: true
+    typography: true
+    hierarchy: true
+    rhythm: true
+    composition: true
+    human_finish: true
+    audit: true
+    polish: true
+    visual_audit: true
+  max_polish_iterations: 5
+  design_direction: ".docforge/model/design_direction.yaml"
+  audit_categories:
+    - TYPOGRAPHY
+    - SPACING
+    - HIERARCHY
+    - DENSITY
+    - CONSISTENCY
+    - TABLES
+    - FIGURES
+    - HUMAN_FINISH
+    - ANTI_SLOP
+
 output:
   docx: true
   pdf: true

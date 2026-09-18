@@ -157,25 +157,45 @@ case "$CMD" in
     reset)    cmd_reset "$@" ;;
     validate) cmd_validate "$@" ;;
     loop)     cmd_loop "$@" ;;
-    inspect)  python3 "$LOOP_PY" inspect "$@" ;;
-    analyze)  python3 "$LOOP_PY" analyze "$@" ;;
-    assemble) python3 "$LOOP_PY" assemble "$@" ;;
-    export)   python3 "$LOOP_PY" export "$@" ;;
-    report)   python3 "$LOOP_PY" report "$@" ;;
+    inspect)       python3 "$LOOP_PY" inspect "$@" ;;
+    analyze)       python3 "$LOOP_PY" analyze "$@" ;;
+    assemble)      python3 "$LOOP_PY" assemble "$@" ;;
+    export)        python3 "$LOOP_PY" export "$@" ;;
+    report)        python3 "$LOOP_PY" report "$@" ;;
+    craft)         python3 "$LOOP_PY" craft "$@" ;;
+    taste)         python3 "$LOOP_PY" taste "$@" ;;
+    typography)    python3 "$LOOP_PY" typography "$@" ;;
+    composition)   python3 "$LOOP_PY" composition "$@" ;;
+    rhythm)        python3 "$LOOP_PY" rhythm "$@" ;;
+    polish)        python3 "$LOOP_PY" polish "$@" ;;
+    humanize)      python3 "$LOOP_PY" humanize "$@" ;;
+    audit)         python3 "$LOOP_PY" audit "$@" ;;
+    visual-audit)  python3 "$LOOP_PY" visual-audit "$@" ;;
     help|--help|-h)
-        echo "Usage: $0 {status|run|resume|reset|validate|loop|inspect|analyze|assemble|export|report|help}"
+        echo "Usage: $0 {status|run|resume|reset|validate|loop|inspect|analyze|assemble|export|report|craft|taste|typography|composition|rhythm|polish|humanize|audit|visual-audit|help}"
         echo ""
-        echo "  status    Show current workflow state"
-        echo "  run       Run one step (--steps N for multiple)"
-        echo "  resume    Resume from last state"
-        echo "  reset     Reset workflow (--force required)"
-        echo "  validate  Validate structure proposal"
-        echo "  loop      Run continuous heartbeat until terminal state"
-        echo "  inspect   Run document inspection"
-        echo "  analyze   Run structure analysis"
-        echo "  assemble  Assemble chapters"
-        echo "  export    Export DOCX + PDF"
-        echo "  report    Generate final report"
+        echo "  status       Show current workflow state"
+        echo "  run          Run one step (--steps N for multiple)"
+        echo "  resume       Resume from last state"
+        echo "  reset        Reset workflow (--force required)"
+        echo "  validate     Validate structure proposal"
+        echo "  loop         Run continuous heartbeat until terminal state"
+        echo "  inspect      Run document inspection"
+        echo "  analyze      Run structure analysis"
+        echo "  assemble     Assemble chapters"
+        echo "  export       Export DOCX + PDF"
+        echo "  report       Generate final report"
+        echo ""
+        echo "  Document Craft:"
+        echo "  craft        Run full editorial quality pipeline"
+        echo "  taste        Run editorial taste analysis"
+        echo "  typography   Run typographic optimization"
+        echo "  composition  Run page composition analysis"
+        echo "  rhythm       Run document rhythm analysis"
+        echo "  polish       Run final polish pass"
+        echo "  humanize     Reduce signs of mechanical generation"
+        echo "  audit        Run document craft audit"
+        echo "  visual-audit Export PDF and run visual audit"
         ;;
     *)
         err "Unknown command: $CMD"

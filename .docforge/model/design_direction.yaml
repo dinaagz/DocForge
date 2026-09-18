@@ -1,0 +1,95 @@
+# ============================================================
+# Design Direction — Document Craft Visual & Editorial Guide
+# ============================================================
+# This file is the single source of truth for all document craft
+# agents. Each agent reads it to align its decisions with the
+# global editorial direction. The Art Director produces it;
+# all other agents consume it.
+# ============================================================
+
+# Document profile — determines the base aesthetic
+document_type: academic
+# Options: academic, corporate, technical, institutional, editorial, minimal
+
+audience: academic_jury
+tone: formal
+language: fr_FR
+
+# Visual style
+visual_style: restrained-editorial
+# Options: restrained-editorial, clean-corporate, technical-dense, minimal-modern
+
+# Density — how much content per page
+density: medium
+# Options: low (airy, lots of whitespace), medium (balanced), high (dense but structured)
+
+# Color usage
+color_usage: minimal
+# Options: none, minimal, controlled, expressive
+
+# Typography direction
+typography:
+  approach: formal
+  # Options: formal, modern, editorial, technical
+  body_family: "Times New Roman"
+  body_size_pt: 12
+  heading_contrast: moderate
+  # Options: subtle, moderate, strong
+  line_length_target: optimal
+  # Options: short (45-55 chars), optimal (55-75 chars), long (75-90 chars)
+
+# Spacing strategy
+spacing:
+  philosophy: breathing
+  # Options: tight, balanced, breathing, generous
+  heading_space_above: proportional
+  heading_space_below: reduced
+  paragraph_gap: consistent
+  section_break: page_break_h1
+
+# Hierarchy
+hierarchy:
+  levels: 3
+  differentiation: size_and_weight
+  # Options: size_only, weight_only, size_and_weight, size_weight_color
+  numbering: none
+  # Options: none, arabic, roman, mixed
+
+# Table treatment
+table_style:
+  borders: light
+  # Options: none, light, medium, full
+  header_emphasis: bold_only
+  # Options: bold_only, shaded, bordered, accent_color
+  cell_padding: comfortable
+  # Options: tight, comfortable, generous
+  alignment: left_header_left_body
+
+# Figure treatment
+figure_style:
+  caption_position: below
+  caption_style: italic
+  alignment: center
+  spacing_above: moderate
+  spacing_below: moderate
+
+# Header / Footer
+header_footer_style:
+  header: minimal
+  footer: page_number_centered
+  first_page: different
+
+# Page strategy
+page_strategy:
+  avoid_orphan_headings: true
+  avoid_widow_lines: true
+  min_lines_before_break: 3
+  max_empty_ratio: 0.4
+  balance_density: true
+
+# Cover / preliminary pages
+cover_strategy: institutional_sober
+
+# Finish level — how polished the output should be
+finish_level: high
+# Options: draft, standard, high, impeccable

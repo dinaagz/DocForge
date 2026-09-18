@@ -34,6 +34,8 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+import yaml
+
 # Ensure scripts/ is on the path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -60,6 +62,20 @@ STATES = [
     "ASSEMBLY",
     "GLOBAL_QA",
     "TARGETED_GLOBAL_CORRECTION",
+    # Document Craft phases (post-assembly, pre-export)
+    "DOCUMENT_CRAFT",
+    "CRAFT_TASTE",
+    "CRAFT_TYPOGRAPHY",
+    "CRAFT_HIERARCHY",
+    "CRAFT_RHYTHM",
+    "CRAFT_COMPOSITION",
+    "CRAFT_HUMAN_FINISH",
+    "CRAFT_AUDIT",
+    "CRAFT_POLISH",
+    "CRAFT_VISUAL_AUDIT",
+    "CRAFT_FIX",
+    "CRAFT_REAUDIT",
+    "CRAFT_DONE",
     "EXPORT",
     "FINAL_REPORT",
     "DONE",
@@ -605,7 +621,7 @@ def step_global_qa(state: Dict[str, Any]) -> Dict[str, Any]:
     if qa_report["overall"] == "PASS":
         logger.info("Global QA PASSED (iteration %d)", g_iter)
         log_event("GLOBAL_QA_PASSED", iteration=g_iter)
-        return set_phase(state, "EXPORT")
+        return set_phase(state, "DOCUMENT_CRAFT")
     else:
         logger.info("Global QA FAILED (iteration %d): %s", g_iter, qa_report["issues"])
         log_event("GLOBAL_QA_FAILED", iteration=g_iter, issues=qa_report["issues"])
@@ -613,6 +629,251 @@ def step_global_qa(state: Dict[str, Any]) -> Dict[str, Any]:
         _apply_targeted_fix("GLOBAL", qa_report["issues"])
         # Loop back (next iteration)
         return set_phase(state, "GLOBAL_QA", global_iteration=g_iter)
+
+
+# ── Document Craft steps ──────────────────────────────────────
+
+def _load_design_direction() -> Dict[str, Any]:
+    dd_path = PROJECT_ROOT / ".docforge" / "model" / "design_direction.yaml"
+    if dd_path.exists():
+        with open(dd_path, "r", encoding="utf-8") as fh:
+            return yaml.safe_load(fh) or {}
+    return {}
+
+
+def _determine_craft_phases(doc_type: str) -> List[str]:
+    """Determine which craft phases to run based on document type."""
+    full_pipeline = [
+        "CRAFT_TASTE", "CRAFT_TYPOGRAPHY", "CRAFT_HIERARCHY",
+        "CRAFT_RHYTHM", "CRAFT_COMPOSITION", "CRAFT_HUMAN_FINISH",
+        "CRAFT_AUDIT", "CRAFT_POLISH",
+    ]
+    if doc_type in ("technical",):
+        return [
+            "CRAFT_TASTE", "CRAFT_TYPOGRAPHY", "CRAFT_HIERARCHY",
+            "CRAFT_AUDIT", "CRAFT_POLISH",
+        ]
+    if doc_type in ("minimal",):
+        return [
+            "CRAFT_TASTE", "CRAFT_TYPOGRAPHY",
+            "CRAFT_AUDIT", "CRAFT_POLISH",
+        ]
+    return full_pipeline
+
+
+def step_document_craft(state: Dict[str, Any]) -> Dict[str, Any]:
+    """Initialize the Document Craft pipeline."""
+    cfg = load_config()
+    dd = _load_design_direction()
+    doc_type = dd.get("document_type", cfg.get("document", {}).get("type", "academic"))
+
+    phases = _determine_craft_phases(doc_type)
+    state["craft_phases"] = phases
+    state["craft_phase_index"] = 0
+    state["craft_iteration"] = 0
+
+    log_event("DOCUMENT_CRAFT_START", doc_type=doc_type, phases=phases)
+    logger.info("Document Craft pipeline: %s", phases)
+
+    if phases:
+        return set_phase(state, phases[0])
+    return set_phase(state, "EXPORT")
+
+
+def _run_craft_script(script_name: str, *args: str) -> Tuple[int, str, str]:
+    """Run a craft script and return results."""
+    return run_script(script_name, *args)
+
+
+def _advance_craft(state: Dict[str, Any]) -> Dict[str, Any]:
+    """Move to the next craft phase or to CRAFT_AUDIT/EXPORT."""
+    phases = state.get("craft_phases", [])
+    idx = state.get("craft_phase_index", 0) + 1
+    state["craft_phase_index"] = idx
+
+    if idx < len(phases):
+        return set_phase(state, phases[idx])
+    return set_phase(state, "EXPORT")
+
+
+def step_craft_taste(state: Dict[str, Any]) -> Dict[str, Any]:
+    """Run editorial taste analysis and produce design direction."""
+    working = _get_working_docx()
+    if not working.exists():
+        logger.warning("No working DOCX for craft taste analysis")
+        return _advance_craft(state)
+
+    rc, out, err = _run_craft_script("craft_audit.py", str(working), "--category", "EDITORIAL_TASTE")
+    if rc == 0:
+        log_event("CRAFT_TASTE_DONE", status="ok")
+    else:
+        logger.warning("Craft taste analysis: %s", err)
+        log_event("CRAFT_TASTE_DONE", status="warn", error=err[:200])
+
+    return _advance_craft(state)
+
+
+def step_craft_typography(state: Dict[str, Any]) -> Dict[str, Any]:
+    """Run typographic craft analysis and corrections."""
+    working = _get_working_docx()
+    if not working.exists():
+        return _advance_craft(state)
+
+    rc, out, err = _run_craft_script("craft_audit.py", str(working), "--category", "TYPOGRAPHY")
+    if rc == 0:
+        try:
+            data = json.loads(out)
+            issues = data.get("issues", [])
+            if issues:
+                log_event("CRAFT_TYPOGRAPHY_ISSUES", count=len(issues))
+                run_script("apply_styles.py", str(working))
+        except json.JSONDecodeError:
+            pass
+    log_event("CRAFT_TYPOGRAPHY_DONE")
+    return _advance_craft(state)
+
+
+def step_craft_hierarchy(state: Dict[str, Any]) -> Dict[str, Any]:
+    """Verify and fix visual hierarchy."""
+    working = _get_working_docx()
+    if not working.exists():
+        return _advance_craft(state)
+
+    rc, out, err = _run_craft_script("craft_audit.py", str(working), "--category", "HIERARCHY")
+    log_event("CRAFT_HIERARCHY_DONE")
+    return _advance_craft(state)
+
+
+def step_craft_rhythm(state: Dict[str, Any]) -> Dict[str, Any]:
+    """Analyze document rhythm."""
+    working = _get_working_docx()
+    if not working.exists():
+        return _advance_craft(state)
+
+    rc, out, err = _run_craft_script("craft_audit.py", str(working), "--category", "RHYTHM")
+    log_event("CRAFT_RHYTHM_DONE")
+    return _advance_craft(state)
+
+
+def step_craft_composition(state: Dict[str, Any]) -> Dict[str, Any]:
+    """Analyze page composition."""
+    working = _get_working_docx()
+    if not working.exists():
+        return _advance_craft(state)
+
+    rc, out, err = _run_craft_script("page_analyzer.py", str(working))
+    if rc == 0:
+        try:
+            data = json.loads(out)
+            pages = data.get("pages", [])
+            weak_pages = [p for p in pages if p.get("issues")]
+            if weak_pages:
+                log_event("CRAFT_COMPOSITION_ISSUES", weak_pages=len(weak_pages))
+        except json.JSONDecodeError:
+            pass
+    log_event("CRAFT_COMPOSITION_DONE")
+    return _advance_craft(state)
+
+
+def step_craft_human_finish(state: Dict[str, Any]) -> Dict[str, Any]:
+    """Check for signs of mechanical generation."""
+    working = _get_working_docx()
+    if not working.exists():
+        return _advance_craft(state)
+
+    rc, out, err = _run_craft_script("craft_audit.py", str(working), "--category", "HUMAN_FINISH")
+    log_event("CRAFT_HUMAN_FINISH_DONE")
+    return _advance_craft(state)
+
+
+def step_craft_audit(state: Dict[str, Any]) -> Dict[str, Any]:
+    """Full document craft audit."""
+    working = _get_working_docx()
+    if not working.exists():
+        return _advance_craft(state)
+
+    rc, out, err = _run_craft_script("craft_audit.py", str(working))
+    audit_result = {}
+    if rc == 0:
+        try:
+            audit_result = json.loads(out)
+        except json.JSONDecodeError:
+            pass
+
+    issues = audit_result.get("issues", [])
+    critical = [i for i in issues if i.get("severity") == "CRITICAL"]
+    high = [i for i in issues if i.get("severity") == "HIGH"]
+
+    save_state("craft_audit", {
+        "timestamp": now_iso(),
+        "total_issues": len(issues),
+        "critical": len(critical),
+        "high": len(high),
+        "issues": issues,
+    })
+
+    log_event("CRAFT_AUDIT_DONE", total=len(issues), critical=len(critical), high=len(high))
+
+    if critical and state.get("craft_iteration", 0) < 5:
+        return set_phase(state, "CRAFT_FIX")
+
+    return _advance_craft(state)
+
+
+def step_craft_polish(state: Dict[str, Any]) -> Dict[str, Any]:
+    """Final polish pass."""
+    working = _get_working_docx()
+    if not working.exists():
+        return _advance_craft(state)
+
+    rc, out, err = _run_craft_script("craft_audit.py", str(working), "--category", "POLISH")
+    log_event("CRAFT_POLISH_DONE")
+    return _advance_craft(state)
+
+
+def step_craft_visual_audit(state: Dict[str, Any]) -> Dict[str, Any]:
+    """PDF visual audit — render and check the PDF."""
+    cfg = load_config()
+    working = _get_working_docx()
+    if not working.exists():
+        return set_phase(state, "CRAFT_DONE")
+
+    if cfg.get("output", {}).get("pdf", True):
+        rc, out, err = run_script("export_pdf.py", str(working))
+        if rc != 0:
+            logger.warning("PDF export for visual audit failed: %s", err)
+
+    log_event("CRAFT_VISUAL_AUDIT_DONE")
+    return set_phase(state, "CRAFT_DONE")
+
+
+def step_craft_fix(state: Dict[str, Any]) -> Dict[str, Any]:
+    """Apply fixes from craft audit, then re-audit."""
+    iteration = state.get("craft_iteration", 0) + 1
+    state["craft_iteration"] = iteration
+
+    if iteration > 5:
+        logger.warning("Craft fix loop exceeded 5 iterations")
+        log_event("CRAFT_FIX_LIMIT", iterations=iteration)
+        return set_phase(state, "CRAFT_POLISH")
+
+    working = _get_working_docx()
+    if working.exists():
+        run_script("apply_styles.py", str(working))
+        log_event("CRAFT_FIX_APPLIED", iteration=iteration)
+
+    return set_phase(state, "CRAFT_AUDIT")
+
+
+def step_craft_reaudit(state: Dict[str, Any]) -> Dict[str, Any]:
+    """Re-audit after craft fixes."""
+    return step_craft_audit(state)
+
+
+def step_craft_done(state: Dict[str, Any]) -> Dict[str, Any]:
+    """Document Craft pipeline complete."""
+    log_event("DOCUMENT_CRAFT_COMPLETE")
+    return set_phase(state, "EXPORT")
 
 
 def step_export(state: Dict[str, Any]) -> Dict[str, Any]:
@@ -662,6 +923,20 @@ STEP_MAP = {
     "NEXT_CHAPTER": step_next_chapter,
     "ASSEMBLY": step_assembly,
     "GLOBAL_QA": step_global_qa,
+    # Document Craft phases
+    "DOCUMENT_CRAFT": step_document_craft,
+    "CRAFT_TASTE": step_craft_taste,
+    "CRAFT_TYPOGRAPHY": step_craft_typography,
+    "CRAFT_HIERARCHY": step_craft_hierarchy,
+    "CRAFT_RHYTHM": step_craft_rhythm,
+    "CRAFT_COMPOSITION": step_craft_composition,
+    "CRAFT_HUMAN_FINISH": step_craft_human_finish,
+    "CRAFT_AUDIT": step_craft_audit,
+    "CRAFT_POLISH": step_craft_polish,
+    "CRAFT_VISUAL_AUDIT": step_craft_visual_audit,
+    "CRAFT_FIX": step_craft_fix,
+    "CRAFT_REAUDIT": step_craft_reaudit,
+    "CRAFT_DONE": step_craft_done,
     "EXPORT": step_export,
     "FINAL_REPORT": step_final_report,
 }
@@ -856,7 +1131,10 @@ Commands:
     parser.add_argument("command", nargs="?", default="status",
                         choices=["status", "run", "resume", "reset",
                                  "validate", "inspect", "analyze",
-                                 "assemble", "export", "report"])
+                                 "assemble", "export", "report",
+                                 "craft", "taste", "typography",
+                                 "composition", "rhythm", "polish",
+                                 "humanize", "audit", "visual-audit"])
     parser.add_argument("--steps", type=int, default=100, help="Max steps to run (default: 100)")
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--file", type=str, help="Path to validated structure JSON")
@@ -887,6 +1165,34 @@ Commands:
     elif args.command == "report":
         from generate_report import main as gen_main
         return gen_main()
+    elif args.command == "craft":
+        state = get_loop_state()
+        set_phase(state, "DOCUMENT_CRAFT")
+        cmd_run(max_steps=args.steps)
+    elif args.command == "taste":
+        state = get_loop_state()
+        step_craft_taste(state)
+    elif args.command == "typography":
+        state = get_loop_state()
+        step_craft_typography(state)
+    elif args.command == "composition":
+        state = get_loop_state()
+        step_craft_composition(state)
+    elif args.command == "rhythm":
+        state = get_loop_state()
+        step_craft_rhythm(state)
+    elif args.command == "polish":
+        state = get_loop_state()
+        step_craft_polish(state)
+    elif args.command == "humanize":
+        state = get_loop_state()
+        step_craft_human_finish(state)
+    elif args.command == "audit":
+        state = get_loop_state()
+        step_craft_audit(state)
+    elif args.command == "visual-audit":
+        state = get_loop_state()
+        step_craft_visual_audit(state)
 
     return 0
 

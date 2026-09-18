@@ -84,3 +84,77 @@ Create `.claude/skills/<skill-name>/SKILL.md` with trigger conditions, process s
 ## Adding New Agents
 
 Create `.claude/agents/<agent-name>.md` with frontmatter (name, description, model, tools) and instructions.
+
+## Document Craft System
+
+After GLOBAL_QA passes and before EXPORT, the loop enters the **DOCUMENT_CRAFT** pipeline.
+This system gives DocForge editorial taste, typographic craft, and visual quality.
+
+### Craft Pipeline
+
+```
+GLOBAL_QA (pass)
+    → DOCUMENT_CRAFT
+        → CRAFT_TASTE         (design direction)
+        → CRAFT_TYPOGRAPHY    (typographic optimization)
+        → CRAFT_HIERARCHY     (visual hierarchy verification)
+        → CRAFT_RHYTHM        (document rhythm analysis)
+        → CRAFT_COMPOSITION   (page composition analysis)
+        → CRAFT_HUMAN_FINISH  (anti-mechanical-generation)
+        → CRAFT_AUDIT         (full quality audit)
+        → CRAFT_POLISH        (final finishing)
+    → EXPORT
+```
+
+### Craft Architecture
+
+```
+ART DIRECTOR (design_direction.yaml)
+       ↓
+BUILDERS (parallel where independent)
+  ├── TYPOGRAPHIC EDITOR
+  ├── PAGE COMPOSER
+  ├── EDITORIAL CRAFT EDITOR
+  ├── HUMAN FINISH EDITOR
+  └── DOCUMENT RHYTHM
+       ↓
+DOCUMENT AUDITOR (read-only verifier)
+       ↓
+DOCUMENT POLISHER
+       ↓
+CONTROLLER
+```
+
+### Craft Commands
+
+```bash
+./run.sh craft          # Full editorial quality pipeline
+./run.sh taste          # Editorial taste → design direction
+./run.sh typography     # Typographic optimization
+./run.sh composition    # Page composition analysis
+./run.sh rhythm         # Document rhythm analysis
+./run.sh polish         # Final polish pass
+./run.sh humanize       # Reduce mechanical generation signs
+./run.sh audit          # Document craft audit
+./run.sh visual-audit   # PDF visual audit
+```
+
+### Design Direction
+
+The Art Director produces `.docforge/model/design_direction.yaml`, which all
+craft agents read. It defines: document_type, visual_style, density, typography
+approach, spacing philosophy, hierarchy method, table/figure treatment, and
+finish level.
+
+### Quality Dimensions
+
+Internal quality scoring across 10 dimensions (0-4 each):
+typography, hierarchy, spacing, composition, density, consistency,
+tables, figures, pagination, human_finish
+
+### Separation Principle
+
+- **Builders** modify the document (typographic-editor, page-composer, etc.)
+- **Auditor** evaluates the document (document-auditor — has NO Write tool)
+- **Polisher** applies final fixes (document-polisher)
+- An agent that corrects is NEVER its own verifier

@@ -137,6 +137,28 @@ def generate() -> str:
                     lines.append(f"- `{f.relative_to(f.parent.parent.parent) if len(f.parts) > 3 else f.name}`")
     lines.append("")
 
+    # 9. Document Craft results
+    lines.append("## 9. Document Craft — Qualité éditoriale")
+    lines.append("")
+    craft_audit = load_state("craft_audit")
+    if craft_audit:
+        lines.append(f"- Issues totales : {craft_audit.get('total_issues', 0)}")
+        lines.append(f"- Critiques : {craft_audit.get('critical', 0)}")
+        lines.append(f"- Haute sévérité : {craft_audit.get('high', 0)}")
+        lines.append("")
+        by_cat: Dict[str, int] = {}
+        for iss in craft_audit.get("issues", [])[:30]:
+            cat = iss.get("category", "OTHER")
+            by_cat[cat] = by_cat.get(cat, 0) + 1
+        if by_cat:
+            lines.append("| Catégorie | Nombre |")
+            lines.append("|-----------|--------|")
+            for cat, cnt in sorted(by_cat.items()):
+                lines.append(f"| {cat} | {cnt} |")
+    else:
+        lines.append("*Aucun audit Document Craft effectué.*")
+    lines.append("")
+
     lines.append("---")
     lines.append("*Rapport généré automatiquement par le loop agentique.*")
 
