@@ -10,6 +10,7 @@ from typing import Any, Dict
 
 
 def detect() -> Dict[str, Any]:
+    providers = _detect_providers()
     caps: Dict[str, Any] = {
         "filesystem": True,  # we can only run here if fs works
         "shell": shutil.which("bash") is not None or os.name == "nt",
@@ -18,12 +19,24 @@ def detect() -> Dict[str, Any]:
         "docx_engine": _mod_ok("docx"),
         "pdf_engine": shutil.which("libreoffice") is not None or shutil.which("soffice") is not None,
         "parallel_agents": True,  # thread scheduler works everywhere
-        "background": False,
-        "scheduled": False,
+        "background": _any_provider_supports("background", providers),
+        "scheduled": _any_provider_supports("scheduled", providers),
         "mcp": os.path.exists(os.path.join(os.getcwd(), ".mcp.json")),
     }
-    caps["providers"] = _detect_providers()
+    caps["providers"] = providers
     return caps
+
+
+def _any_provider_supports(capability: str, providers: Dict[str, bool]) -> bool:
+    """Check if any available provider declares a capability."""
+    from .providers.registry import get as get_provider
+    for name, present in providers.items():
+        if not present:
+            continue
+        adapter = get_provider(name)
+        if adapter and capability in getattr(adapter, "capabilities", []):
+            return True
+    return False
 
 
 def _mod_ok(name: str) -> bool:
