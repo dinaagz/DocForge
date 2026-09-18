@@ -1,0 +1,5 @@
+name: opencode
+mode: code
+command: opencode
+capabilities: [filesystem, shell, agents]
+adapter: adapters/opencode

@@ -1,0 +1,5 @@
+name: qwen
+mode: code
+command: qwen
+capabilities: [filesystem, shell, agents]
+adapter: adapters/qwen

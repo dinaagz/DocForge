@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DocForge Task",
+  "type": "object",
+  "required": ["id", "type", "status"],
+  "properties": {
+    "id": {"type": "string"},
+    "type": {"type": "string"},
+    "agent": {"type": "string"},
+    "provider": {"type": "string"},
+    "status": {"enum": ["PENDING", "READY", "RUNNING", "WAITING", "COMPLETED",
+                         "FAILED", "RETRYING", "BLOCKED", "PENDING_MANUAL"]},
+    "priority": {"type": "integer"},
+    "dependencies": {"type": "array", "items": {"type": "string"}},
+    "parent_task": {"type": ["string", "null"]},
+    "input": {"type": "object"},
+    "output": {"type": "object"},
+    "retry_count": {"type": "integer"},
+    "max_retries": {"type": "integer"},
+    "resource_locks": {"type": "array", "items": {"type": "string"}},
+    "started_at": {"type": ["string", "null"]},
+    "completed_at": {"type": ["string", "null"]},
+    "error": {"type": ["string", "null"]},
+    "branch": {"type": ["string", "null"]},
+    "success_criteria": {"type": "array", "items": {"type": "string"}}
+  }
+}

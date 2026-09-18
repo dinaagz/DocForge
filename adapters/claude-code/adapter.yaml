@@ -1,0 +1,12 @@
+name: claude-code
+runtime: claude
+entrypoint: bin/docforge
+uses:
+  - .claude/agents/
+  - .claude/skills/
+notes: |
+  Le dossier .claude/ reste présent pour la compatibilité Claude Code, mais
+  ne porte plus la logique métier. Le core vit dans docforge/.
+commands:
+  session: claude -f .claude/entry.md
+  run: docforge run

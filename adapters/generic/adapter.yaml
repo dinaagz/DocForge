@@ -1,0 +1,10 @@
+name: generic
+runtime: shell+python
+entrypoint: bin/docforge
+commands:
+  init: docforge init
+  run: docforge run
+  status: docforge status
+  report: docforge report
+notes: |
+  Fonctionne partout où bash + python3 sont disponibles. Aucun LLM requis.

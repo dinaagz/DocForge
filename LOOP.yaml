@@ -1,0 +1,46 @@
+name: DocForge
+version: 0.1.0
+protocol: docforge/1
+loop:
+  cycle:
+    - PLAN
+    - BUILD
+    - VERIFY
+    - MEMORY
+    - CONTROL
+    - REPLAN
+  terminal:
+    - DONE
+    - DONE_WITH_REVIEW_ITEMS
+    - BLOCKED
+    - FAILED_SYSTEM
+tasks:
+  fields: [id, type, agent, priority, dependencies, status, input, output, resource_locks, retry_count, max_retries]
+  states: [PENDING, READY, RUNNING, WAITING, COMPLETED, FAILED, RETRYING, BLOCKED, PENDING_MANUAL]
+document:
+  canonical_path: .docforge/model/canonical_document.json
+  fields:
+    - metadata
+    - language
+    - document_type
+    - style_profile
+    - front_matter
+    - chapters
+    - sections
+    - paragraphs
+    - figures
+    - tables
+    - equations
+    - footnotes
+    - citations
+    - references
+    - bibliography
+    - appendices
+    - cross_references
+    - issues
+    - corrections
+providers:
+  interface: [run_agent, spawn_agent, read_file, write_file, run_command, parallel, background]
+report:
+  path: output/DOCFORGE_REPORT.md
+  language: fr
