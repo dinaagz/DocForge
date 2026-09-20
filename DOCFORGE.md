@@ -87,6 +87,30 @@ PENDING, READY, RUNNING, WAITING, COMPLETED, FAILED, RETRYING, BLOCKED, PENDING_
 
 Toujours produit en français, dans `output/DOCFORGE_REPORT.md` + `.json`.
 
+## Architecture universelle (v0.2)
+
+Doctrine additionnelle : **NO CLAIM OF COMPLETION WITHOUT EVIDENCE.**
+
+- `docforge.formats` : Universal Document Kernel (DOCX/TXT/Markdown
+  implémentés, XLSX/PDF/PPTX/HTML/ODT/CSV enregistrés comme stubs
+  déclaratifs — leurs opérations lèvent explicitement `NotAvailable`).
+- `docforge.audit` : Audit Engine + Issue Registry + Checklist Engine.
+- `docforge.completion` : Contract, Gates, Evidence, Score (0–100 sur
+  ≥10 dimensions), Regression, Versioning (best-version), CompletionGuard.
+- `docforge.improvement.loop` : boucle audit → correction → verify →
+  score → compare → improve avec détection stagnation/oscillation/budget.
+- `docforge.contract.interviewer` : générateur de squelette CONTRACT.
+
+Anti-slop (§19) :
+
+```
+DO NOT GUESS.
+DO NOT SKIP.
+DO NOT CLAIM WITHOUT EVIDENCE.
+DO NOT DESTROY WORKING PARTS.
+DO NOT FINISH PREMATURELY.
+```
+
 ## Mode chat vs mode code
 
 - **Mode code** : le runtime exécute réellement les workers en parallèle (Python, threads/processus).

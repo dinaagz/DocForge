@@ -1,0 +1,146 @@
+# DEFINITION_OF_DONE.yaml — La migration n'est terminée que si CHAQUE
+# élément ci-dessous est démontré par preuve concrète (evidence.jsonl,
+# test, ou fichier attendu). Voir GATES.md pour les commandes.
+
+version: "1.0.0"
+
+done_when:
+  - id: DoD-01
+    text: "Repository audité"
+    evidence: ".docforge/project/REPO_AUDIT.md exists"
+    gate: G-DOCSYNC
+
+  - id: DoD-02
+    text: "Plan de migration écrit"
+    evidence: ".docforge/project/PLAN.md exists"
+    gate: G-DOCSYNC
+
+  - id: DoD-03
+    text: "Contract écrit"
+    evidence: ".docforge/project/CONTRACT.yaml exists"
+    gate: G-CONTRACT
+
+  - id: DoD-04
+    text: "Definition of Done écrite"
+    evidence: ".docforge/project/DEFINITION_OF_DONE.yaml exists"
+    gate: G-DOCSYNC
+
+  - id: DoD-05
+    text: "Universal Document Kernel disponible"
+    evidence: "docforge.formats.available() >= {docx, txt, markdown}"
+    gate: G-FORMATS
+
+  - id: DoD-06
+    text: "Architecture multi-format prête"
+    evidence: "stubs registered for xlsx/pdf/pptx/html/odt/csv with implemented=false"
+    gate: G-FORMATS
+
+  - id: DoD-07
+    text: "Canonical Model adapté"
+    evidence: "canonical.new_model() contains extended fields"
+    gate: G-CANONICAL
+
+  - id: DoD-08
+    text: "Audit Engine fonctionnel"
+    evidence: "audit.engine.run_audit produces >=0 issues on an empty canonical without error"
+    gate: G-AUDIT
+
+  - id: DoD-09
+    text: "Issue Registry fonctionnel"
+    evidence: "issues persisted to .docforge/audits/issues.jsonl"
+    gate: G-ISSUES
+
+  - id: DoD-10
+    text: "Checklist Engine fonctionnel"
+    evidence: ".docforge/checklists/current.json is produced from issues"
+    gate: G-CHECKLIST
+
+  - id: DoD-11
+    text: "Completion Engine fonctionnel"
+    evidence: "completion.completion_guard rejects DONE with open required gate"
+    gate: G-GUARD
+
+  - id: DoD-12
+    text: "Gates fonctionnelles"
+    evidence: ".docforge/completion/GATES.yaml loaded, gates.evaluate returns pass/fail"
+    gate: G-GUARD
+
+  - id: DoD-13
+    text: "Evidence Store fonctionnel"
+    evidence: "evidence.record appends to evidence.jsonl and evidence.for_gate returns entries"
+    gate: G-EVIDENCE
+
+  - id: DoD-14
+    text: "Score Engine fonctionnel"
+    evidence: "score.compute returns dict with dimensions and total /100"
+    gate: G-SCORE
+
+  - id: DoD-15
+    text: "Regression Engine fonctionnel"
+    evidence: "regression.check(prev, cur) returns bool + reasons"
+    gate: G-REGRESSION
+
+  - id: DoD-16
+    text: "Best Version fonctionnelle"
+    evidence: "versioning.promote_if_better retains best_score"
+    gate: G-BESTVER
+
+  - id: DoD-17
+    text: "Improvement Loop fonctionnelle"
+    evidence: "improvement.loop.run detects stagnation & stops"
+    gate: G-IMPROVE
+
+  - id: DoD-18
+    text: "Completion Guard fonctionnel"
+    evidence: "completion_guard.evaluate returns 'NOT_DONE' when required gate is open"
+    gate: G-GUARD
+
+  - id: DoD-19
+    text: "Commandes /DocForge définies"
+    evidence: "cli exposes new subcommands"
+    gate: G-COMMANDS
+
+  - id: DoD-20
+    text: "Mode provider-agnostic conservé"
+    evidence: "providers.available() includes 'generic' unconditionally"
+    gate: G-PROVIDERS
+
+  - id: DoD-21
+    text: "Builders/verifiers séparés"
+    evidence: "workers/builders.py and workers/verifiers.py both loaded, no verifier writes files"
+    gate: G-NOREG
+
+  - id: DoD-22
+    text: "Document Craft conservé"
+    evidence: "scripts/craft_score.py, scripts/craft_audit.py still importable"
+    gate: G-NOREG
+
+  - id: DoD-23
+    text: "Principes anti-slop intégrés"
+    evidence: ".docforge/skills/document-craft/anti-slop-document present + doctrine in DOCFORGE.md"
+    gate: G-DOCSYNC
+
+  - id: DoD-24
+    text: "Principes unlazy intégrés nativement"
+    evidence: "completion_guard implements NO CLAIM OF COMPLETION WITHOUT EVIDENCE"
+    gate: G-GUARD
+
+  - id: DoD-25
+    text: "Tests passants"
+    evidence: "pytest tests/ green, >= 29 baseline + new tests"
+    gate: G-NOREG
+
+  - id: DoD-26
+    text: "Documentation synchronisée"
+    evidence: "README.md, DOCFORGE.md updated, no undocumented new capability, no fake capability documented"
+    gate: G-DOCSYNC
+
+  - id: DoD-27
+    text: "Aucun composant critique laissé avec une implémentation fictive"
+    evidence: "grep for 'raise NotImplementedError' shows only in explicit stub adapters with implemented=false"
+    gate: G-NOFAKE
+
+  - id: DoD-28
+    text: "Aucun claim de capacité sans implémentation correspondante"
+    evidence: "audit report .docforge/project/IMPLEMENTATION_AUDIT.md lists partial/done/deferred honestly"
+    gate: G-NOFAKE

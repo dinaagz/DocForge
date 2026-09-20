@@ -28,6 +28,58 @@ def _hash_file(p: Path) -> str:
     return h.hexdigest()[:16]
 
 
+def new_model() -> Dict[str, Any]:
+    """Empty extended canonical model — full field set for any format."""
+    return {
+        "metadata": {
+            "created_at": now_iso(),
+            "source_path": None,
+            "source_hash": "",
+            "engine": "docforge",
+            "version": "0.2.0",
+            "document_format": "unknown",
+        },
+        "language": "fr",
+        "document_type": "auto",
+        "style_profile": "academic",
+        "front_matter": [],
+        # legacy DOCX-oriented fields (kept for retro-compat)
+        "chapters": [],
+        "paragraphs": [],
+        "footnotes": [],
+        "appendices": [],
+        "cross_references": [],
+        "corrections": [],
+        # extended universal fields
+        "sections": [],
+        "blocks": [],
+        "pages": [],
+        "slides": [],
+        "sheets": [],
+        "tables": [],
+        "figures": [],
+        "images": [],
+        "charts": [],
+        "formulas": [],
+        "equations": [],
+        "headers": [],
+        "footers": [],
+        "styles": [],
+        "references": [],
+        "citations": [],
+        "bibliography": [],
+        "hyperlinks": [],
+        "embedded_objects": [],
+        "external_dependencies": [],
+        "calculations": [],
+        "accessibility": {"structure_present": False, "alt_text": []},
+        "provenance": [],
+        "issues": [],
+        "issue_links": [],
+        "verification_evidence": [],
+    }
+
+
 def load_canonical() -> Dict[str, Any]:
     if not CANONICAL_PATH.exists():
         return {}
@@ -97,31 +149,12 @@ def build_from_inspection() -> Dict[str, Any]:
         src_docx = p
         break
 
-    model = {
-        "metadata": {
-            "created_at": now_iso(),
-            "source_path": str(src_docx) if src_docx else None,
-            "source_hash": _hash_file(src_docx) if src_docx else "",
-            "engine": "docforge",
-            "version": "0.1.0",
-        },
-        "language": "fr",
-        "document_type": "auto",
-        "style_profile": "academic",
-        "front_matter": [],
-        "chapters": chapters,
-        "paragraphs": paragraphs,
-        "figures": [],
-        "tables": [],
-        "equations": [],
-        "footnotes": [],
-        "citations": [],
-        "references": [],
-        "bibliography": [],
-        "appendices": [],
-        "cross_references": [],
-        "issues": [],
-        "corrections": [],
-    }
+    model = new_model()
+    model["metadata"].update({
+        "source_path": str(src_docx) if src_docx else None,
+        "source_hash": _hash_file(src_docx) if src_docx else "",
+    })
+    model["chapters"] = chapters
+    model["paragraphs"] = paragraphs
     save_canonical(model)
     return model

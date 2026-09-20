@@ -3,6 +3,11 @@
 .docforge/memory/*.jsonl
 .docforge/model/*.json
 .docforge/runtime/*
+.docforge/audits/*.jsonl
+.docforge/checklists/*.json
+.docforge/completion/evidence.jsonl
+.docforge/scores/*.json
+!.docforge/scores/best/
 
 # Legacy Loop
 state/*.json
