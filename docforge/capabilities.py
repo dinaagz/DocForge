@@ -8,6 +8,18 @@ import os
 import shutil
 from typing import Any, Dict
 
+# Single source of truth: canonical provider name → CLI binary to probe.
+# Reused by docforge.installer.doctor so the binary list is never
+# duplicated.
+PROVIDER_BINARIES: Dict[str, str] = {
+    "claude-code": "claude",
+    "codex": "codex",
+    "gemini": "gemini",
+    "cursor": "cursor-agent",
+    "qwen": "qwen",
+    "opencode": "opencode",
+}
+
 
 def detect() -> Dict[str, Any]:
     providers = _detect_providers()
@@ -49,12 +61,7 @@ def _mod_ok(name: str) -> bool:
 
 def _detect_providers() -> Dict[str, bool]:
     # Provider CLI presence probes (best effort; absence is not an error)
-    return {
-        "claude-code": shutil.which("claude") is not None,
-        "codex": shutil.which("codex") is not None,
-        "gemini": shutil.which("gemini") is not None,
-        "cursor": shutil.which("cursor-agent") is not None,
-        "qwen": shutil.which("qwen") is not None,
-        "opencode": shutil.which("opencode") is not None,
-        "generic": True,
-    }
+    result = {name: shutil.which(binary) is not None
+              for name, binary in PROVIDER_BINARIES.items()}
+    result["generic"] = True
+    return result

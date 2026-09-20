@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import List, Optional
 
 from . import __version__
-from .capabilities import detect
 from .config import load_config
 from .events import emit
 from .orchestrator import Orchestrator

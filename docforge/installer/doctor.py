@@ -1,4 +1,6 @@
-"""Structured health checks — replaces the ad-hoc `capabilities.detect`."""
+"""Structured health checks — supersedes `capabilities.detect`'s ad-hoc
+report format, but reuses its provider binary list as the single
+source of truth (`capabilities.PROVIDER_BINARIES`)."""
 from __future__ import annotations
 
 import os
@@ -7,6 +9,7 @@ import sys
 from typing import Any, Dict, List
 
 from .. import __version__
+from ..capabilities import PROVIDER_BINARIES
 from . import layout
 
 
@@ -62,12 +65,11 @@ def check_all() -> Dict[str, Any]:
                        "detail": shutil.which(tool) or "not found"})
 
     # Providers (optional)
-    for prov in ("claude", "codex", "gemini", "cursor-agent", "qwen",
-                 "opencode"):
-        ok = shutil.which(prov) is not None
-        checks.append({"name": f"provider: {prov}",
+    for prov_name, binary in PROVIDER_BINARIES.items():
+        ok = shutil.which(binary) is not None
+        checks.append({"name": f"provider: {prov_name}",
                        "status": _status(ok, missing_is_warn=True),
-                       "detail": shutil.which(prov) or "not installed"})
+                       "detail": shutil.which(binary) or "not installed"})
 
     counts = {"OK": 0, "WARNING": 0, "MISSING": 0, "ERROR": 0}
     for c in checks:
