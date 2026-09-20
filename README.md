@@ -15,6 +15,56 @@ complet en français** — sans intervention humaine intermédiaire.
 
 ---
 
+# Installation
+
+## macOS / Linux
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/dinaagz/DocForge/main/install.sh | bash
+```
+
+## Windows PowerShell
+
+```powershell
+irm https://raw.githubusercontent.com/dinaagz/DocForge/main/install.ps1 | iex
+```
+
+## Vérifier
+
+```
+docforge --version
+docforge doctor
+```
+
+## Mettre à jour
+
+```
+docforge update              # applique la dernière release stable
+docforge update --check      # rapport JSON, aucun changement disque
+docforge update --rollback   # revient à la version précédente
+```
+
+## Désinstaller
+
+```
+docforge uninstall           # préserve vos projets .docforge/, input/, output/, work/
+```
+
+## Utiliser dans un projet
+
+```
+mkdir mon-doc && cd mon-doc
+docforge init
+cp mon-fichier.docx input/
+docforge run
+```
+
+Détails : [`docs/INSTALL.md`](docs/INSTALL.md),
+[`docs/UPDATE.md`](docs/UPDATE.md),
+[`docs/TROUBLESHOOTING_INSTALL.md`](docs/TROUBLESHOOTING_INSTALL.md).
+
+---
+
 ## Architecture universelle (v0.2)
 
 DocForge est en cours de migration vers une architecture documentaire

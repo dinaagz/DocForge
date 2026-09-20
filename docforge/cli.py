@@ -138,21 +138,71 @@ def cmd_reset(args: argparse.Namespace) -> int:
 
 
 def cmd_doctor(_: argparse.Namespace) -> int:
-    caps = detect()
-    print("── DocForge Doctor ──")
-    for k, v in caps.items():
-        if k == "providers":
-            print(f"  {k}:")
-            for p, ok in v.items():
-                print(f"    {p:<14s} {'AVAILABLE' if ok else 'NOT FOUND'}")
-        else:
-            print(f"  {k:<16s} {'OK' if v else 'MISSING'}")
+    from .installer.doctor import check_all, format_report
+    report = check_all()
+    print(format_report(report))
+    # Non-zero exit only for real errors (missing/warning are informational).
+    return 0 if report["counts"].get("ERROR", 0) == 0 else 2
+
+
+def cmd_install(args: argparse.Namespace) -> int:
+    from .installer.bootstrap import install, path_hint
+    src = Path(args.source) if getattr(args, "source", None) else None
+    r = install(source=src)
+    if not r.get("ok"):
+        print(f"Échec : {r}")
+        return 2
+    print(f"DocForge {r['version']} installé dans {r['path']}")
+    print(f"Launcher : {r['bin']}")
+    if r["migrations"]:
+        print(f"Migrations appliquées : {', '.join(r['migrations'])}")
+    if not r["path_configured"]:
+        print(path_hint())
     return 0
 
 
-def cmd_install(_: argparse.Namespace) -> int:
-    cmd_init(None)  # type: ignore[arg-type]
-    print("Pour une installation complète : ./install.sh")
+def cmd_uninstall(args: argparse.Namespace) -> int:
+    from .installer.uninstaller import plan_uninstall, uninstall
+    if getattr(args, "dry_run", False):
+        print(json.dumps(plan_uninstall(), ensure_ascii=False, indent=2))
+        return 0
+    r = uninstall(purge_state=getattr(args, "purge", False))
+    for p in r["removed"]:
+        print(f"supprimé : {p}")
+    print("Désinstallation terminée. Vos projets .docforge/ ne sont pas touchés.")
+    return 0
+
+
+def cmd_update(args: argparse.Namespace) -> int:
+    from .installer import rollback as rb
+    from .installer.updater import apply as apply_update, check_only
+    if getattr(args, "rollback", False):
+        r = rb.rollback(to=getattr(args, "to", None))
+        print(json.dumps(r, ensure_ascii=False, indent=2))
+        return 0 if r["ok"] else 2
+    r = check_only(source=getattr(args, "source", "github") or "github",
+                   channel=getattr(args, "channel", "stable") or "stable")
+    if getattr(args, "check", False):
+        print(json.dumps(r, ensure_ascii=False, indent=2))
+        return 0
+    if not r.get("update_available") and not getattr(args, "force", False):
+        print(f"Déjà à jour ({r['current']}).")
+        return 0
+    archive = getattr(args, "archive", None)
+    if not archive:
+        print("Pour une mise à jour effective, fournissez --archive <fichier.tar.gz>.")
+        print(json.dumps(r, ensure_ascii=False, indent=2))
+        return 1
+    target = r.get("latest") or getattr(args, "version", None) or "unknown"
+    result = apply_update(Path(archive),
+                          expected_sha256=getattr(args, "sha256", None),
+                          target_version=target)
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0 if result.get("ok") else 2
+
+
+def cmd_version(_: argparse.Namespace) -> int:
+    print(f"DocForge {__version__}")
     return 0
 
 
@@ -340,7 +390,7 @@ def build_parser() -> argparse.ArgumentParser:
                      ("audit-tasks", cmd_audit),
                      ("audit", cmd_audit_engine),
                      ("report", cmd_report),
-                     ("doctor", cmd_doctor), ("install", cmd_install),
+                     ("doctor", cmd_doctor),
                      ("pause", cmd_pause), ("stop", cmd_stop),
                      ("interview", cmd_interview),
                      ("plan", cmd_plan),
@@ -360,6 +410,44 @@ def build_parser() -> argparse.ArgumentParser:
     imp.add_argument("--max-iters", type=int, default=3,
                      dest="max_iters")
     imp.set_defaults(func=cmd_improve)
+
+    # `install` already handled below with its own args (source override).
+    inst = sub.add_parser("install",
+                          help="Installe DocForge dans le layout runtime utilisateur")
+    inst.add_argument("--source", default=None,
+                      help="Chemin d'un checkout DocForge (défaut : courant)")
+    inst.set_defaults(func=cmd_install)
+
+    unins = sub.add_parser("uninstall",
+                           help="Désinstalle DocForge (préserve les projets)")
+    unins.add_argument("--dry-run", action="store_true", dest="dry_run")
+    unins.add_argument("--purge", action="store_true",
+                       help="Supprime aussi l'état runtime (registre versions)")
+    unins.set_defaults(func=cmd_uninstall)
+
+    upd = sub.add_parser("update",
+                         help="Vérifie/applique une mise à jour DocForge")
+    upd.add_argument("--check", action="store_true",
+                     help="N'applique rien, retourne un rapport JSON")
+    upd.add_argument("--force", action="store_true")
+    upd.add_argument("--rollback", action="store_true",
+                     help="Revient à la version précédente installée")
+    upd.add_argument("--to", default=None,
+                     help="Version cible d'un rollback")
+    upd.add_argument("--source", default="github",
+                     help="`github` (défaut) ou `local:<path>`")
+    upd.add_argument("--channel", default="stable",
+                     choices=("stable", "beta", "dev"))
+    upd.add_argument("--archive", default=None,
+                     help="Chemin local d'une archive à installer")
+    upd.add_argument("--sha256", default=None,
+                     help="Empreinte SHA-256 attendue de l'archive")
+    upd.add_argument("--version", dest="version", default=None,
+                     help="Nom de la version cible (défaut : latest détecté)")
+    upd.set_defaults(func=cmd_update)
+
+    vers = sub.add_parser("version", help="Affiche la version DocForge")
+    vers.set_defaults(func=cmd_version)
 
     for name, fn in (("inspect", cmd_inspect), ("structure", cmd_structure),
                      ("format", cmd_format_cmd), ("layout", cmd_layout),
