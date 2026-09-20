@@ -15,6 +15,58 @@ complet en français** — sans intervention humaine intermédiaire.
 
 ---
 
+## Architecture universelle (v0.2)
+
+DocForge est en cours de migration vers une architecture documentaire
+universelle. Le principe fondamental est :
+
+> **NO CLAIM OF COMPLETION WITHOUT EVIDENCE.**
+
+Modules introduits (livrables Phase A–L, voir
+`.docforge/project/PLAN.md`) :
+
+| Module Python                     | Rôle |
+|-----------------------------------|------|
+| `docforge.formats`                | Universal Document Kernel — adapters DOCX, TXT, Markdown (implémentés) + stubs XLSX/PDF/PPTX/HTML/ODT/CSV (déclaratifs, non implémentés). |
+| `docforge.canonical.new_model`    | Modèle canonique étendu (slides, sheets, pages, blocks, tables, figures, formulas, styles, references, provenance, verification_evidence, …). |
+| `docforge.audit.engine`           | Audit engine — produit une liste d'`Issue`. |
+| `docforge.audit.issues`           | Issue Registry — `.docforge/audits/issues.jsonl`. |
+| `docforge.audit.checklist`        | Checklist Engine priorisée — `.docforge/checklists/current.json`. |
+| `docforge.completion.contract`    | Chargement de `.docforge/project/CONTRACT.yaml`, couverture par les gates. |
+| `docforge.completion.gates`       | Gates avec CHECK/EXPECT (`.docforge/completion/GATES.yaml`). |
+| `docforge.completion.evidence`    | Evidence Store — `.docforge/completion/evidence.jsonl`. |
+| `docforge.completion.score`       | Score 0–100 sur ≥10 dimensions. |
+| `docforge.completion.regression`  | Détection régression bloquante (gate flip / score drop). |
+| `docforge.completion.versioning`  | baseline / current / previous / best / last_known_good. |
+| `docforge.completion.completion_guard` | Refuse `DONE` tant qu'une gate requise est ouverte. |
+| `docforge.improvement.loop`       | Boucle audit → correction → verify → score → compare → improve, avec détection stagnation/oscillation/budget. |
+| `docforge.contract.interviewer`   | Squelette d'interview (générateur de CONTRACT). |
+
+Livrables Phase A/B (dans `.docforge/project/`) :
+
+- `REPO_AUDIT.md` — audit du repo avant modification.
+- `PLAN.md` — plan de migration.
+- `CONTRACT.yaml` — exigences vérifiables.
+- `DEFINITION_OF_DONE.yaml` — 28 points de DoD.
+- `IMPLEMENTATION_AUDIT.md` — audit honnête post-implémentation.
+
+Nouvelles commandes CLI (voir `docforge/cli.py`) :
+
+```
+docforge interview       # rappelle le questionnaire de contrat
+docforge audit           # exécute l'Audit Engine, persiste les Issues
+docforge plan            # construit la checklist priorisée
+docforge verify [--gate G] # évalue une ou toutes les gates
+docforge score           # score 0..100 depuis l'état des gates
+docforge improve         # boucle d'amélioration bornée
+docforge final-audit     # invoque le Completion Guard
+docforge inspect|structure|format|layout|tables|figures|formulas|references <path>
+docforge language        # tests de langue (proxy G-NOREG)
+docforge visual          # audit visuel (proxy Completion Guard)
+```
+
+---
+
 ## Sommaire
 
 1. [Pourquoi DocForge](#pourquoi-docforge)

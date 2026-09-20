@@ -56,3 +56,20 @@ callable Python (workers déterministes). Un provider externe peut
 
 Créez `.docforge/agents/<name>.md` (description) et enregistrez le worker
 dans `docforge/workers/` via `register(name, fn)`.
+
+## Nouveaux modules (v0.2)
+
+- **audit-engine** — `docforge.audit.engine.run_audit(model)` produit
+  une liste `Issue` persistée dans `.docforge/audits/issues.jsonl`.
+- **checklist-engine** — `docforge.audit.checklist.build_from_registry`
+  produit `.docforge/checklists/current.json`.
+- **gates-runner** — `docforge.completion.gates.evaluate(gate_id)`
+  exécute une gate CHECK/EXPECT.
+- **completion-guard** — `docforge.completion.completion_guard.evaluate()`
+  refuse `DONE` sans preuve.
+- **score-engine** — `docforge.completion.score.compute(metrics)`.
+- **regression-engine** — `docforge.completion.regression.check(prev, cur)`.
+- **versioning-engine** — `docforge.completion.versioning.submit(record)`.
+- **improvement-loop** — `docforge.improvement.loop.run_bounded(n)`.
+- **format-adapter** — `docforge.formats.get(name)` — DOCX/TXT/Markdown
+  implémentés, autres formats en stubs déclaratifs (`implemented=False`).

@@ -1,0 +1,146 @@
+# CONTRACT.yaml — Exigences vérifiables de la migration DocForge.
+#
+# Chaque exigence est associée à au moins une gate ou un test. Le
+# CompletionGuard refuse "DONE" tant qu'une exigence "required" n'a pas
+# ses preuves. La couverture est calculée par docforge.completion.contract.
+
+version: "1.0.0"
+project: DocForge
+migration: "docforge-universal-architecture"
+
+requirements:
+  universal_formats:
+    status: required
+    gate: G-FORMATS
+    description: >
+      Un UniversalDocumentAdapter existe. Le registre expose au minimum
+      docx (opérationnel) et txt/markdown (opérationnels lecture/écriture
+      + audit basique). Les formats non implémentés (xlsx, pdf, pptx,
+      html, odt, csv) sont enregistrés comme stubs et refusent leurs
+      opérations avec NotImplementedError.
+
+  canonical_model_extended:
+    status: required
+    gate: G-CANONICAL
+    description: >
+      Le modèle canonique accepte slides/sheets/pages/blocks/tables/
+      figures/images/charts/formulas/headers/footers/styles/references/
+      citations/bibliography/hyperlinks/embedded_objects/external_deps/
+      calculations/accessibility/provenance/issue_links/verification_evidence.
+
+  contract_engine:
+    status: required
+    gate: G-CONTRACT
+    description: >
+      docforge.completion.contract charge CONTRACT.yaml, calcule la
+      couverture par les evidences et gates, et expose coverage(gates).
+
+  audit_engine:
+    status: required
+    gate: G-AUDIT
+    description: >
+      docforge.audit.engine.run_audit(canonical) produit une liste
+      d'Issues persistée dans .docforge/audits/issues.jsonl.
+
+  issue_registry:
+    status: required
+    gate: G-ISSUES
+    description: >
+      docforge.audit.issues expose Issue avec id/category/severity/
+      location/description/evidence/impact/recommended_action/deps/status
+      et get_issues() lit issues.jsonl.
+
+  correction_checklist:
+    status: required
+    gate: G-CHECKLIST
+    description: >
+      docforge.audit.checklist.build_from(issues) écrit
+      .docforge/checklists/current.json avec priorité + owner + preuve
+      attendue.
+
+  completion_guard:
+    status: required
+    gate: G-GUARD
+    description: >
+      docforge.completion.completion_guard refuse "DONE" tant qu'une
+      gate "required" ouverte existe ou qu'une preuve manque.
+
+  evidence_system:
+    status: required
+    gate: G-EVIDENCE
+    description: >
+      docforge.completion.evidence.record(gate, source, result, artifact)
+      persiste dans .docforge/completion/evidence.jsonl.
+
+  score_engine:
+    status: required
+    gate: G-SCORE
+    description: >
+      docforge.completion.score produit un score /100 sur ≥10 dimensions.
+
+  regression_engine:
+    status: required
+    gate: G-REGRESSION
+    description: >
+      docforge.completion.regression détecte une régression bloquante
+      (une gate qui passait échoue, un test qui passait échoue, ou une
+      chute de score critique).
+
+  best_version:
+    status: required
+    gate: G-BESTVER
+    description: >
+      docforge.completion.versioning garde baseline/current/previous/
+      best/last_known_good et refuse de perdre le best.
+
+  iterative_improvement:
+    status: required
+    gate: G-IMPROVE
+    description: >
+      docforge.improvement.loop exécute audit→correction→verify→score→
+      compare→improve avec détection stagnation/oscillation/budget.
+
+  provider_agnostic_core:
+    status: required
+    gate: G-PROVIDERS
+    description: >
+      Le core ne dépend d'aucun provider spécifique. providers.available()
+      renvoie au moins ["generic"] hors installation externe.
+
+  universal_commands:
+    status: required
+    gate: G-COMMANDS
+    description: >
+      Le CLI expose : init, run, status, audit, plan, verify, score,
+      improve, report, final-audit, inspect, structure, language, format,
+      layout, visual, tables, figures, formulas, references, interview.
+
+  interview_engine:
+    status: optional
+    gate: G-INTERVIEW
+    description: >
+      docforge.contract.interviewer permet de générer un squelette de
+      CONTRACT.yaml + PLAN.md + DEFINITION_OF_DONE.yaml à partir de
+      réponses YAML fournies.
+
+  no_regression:
+    status: required
+    gate: G-NOREG
+    description: >
+      pytest reste ≥ 29 tests verts (baseline). Aucun test existant
+      supprimé.
+
+  documentation_sync:
+    status: required
+    gate: G-DOCSYNC
+    description: >
+      README, DOCFORGE.md, AGENTS.md, LOOP.yaml décrivent uniquement les
+      capacités effectivement implémentées et pointent vers les modules
+      correspondants.
+
+  no_fake_capability:
+    status: required
+    gate: G-NOFAKE
+    description: >
+      Aucune capacité déclarée "supported" sans implémentation
+      correspondante. Les stubs sont explicitement marqués.

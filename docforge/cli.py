@@ -168,6 +168,162 @@ def cmd_stop(_: argparse.Namespace) -> int:
     return 0
 
 
+# ── Universal DocForge commands ──────────────────────────────
+
+def cmd_interview(_: argparse.Namespace) -> int:
+    from .contract.interviewer import questions
+    for q in questions():
+        print(f"[{q['key']}] {q['prompt']}")
+    print("\nCollectez les réponses puis appelez :")
+    print("  from docforge.contract.interviewer import write_contract")
+    print("  write_contract(<answers>)")
+    return 0
+
+
+def cmd_audit_engine(_: argparse.Namespace) -> int:
+    from .audit.engine import run_audit
+    from .audit.issues import save_all, load_issues
+    from .canonical import load_canonical, new_model
+    issues = run_audit(load_canonical() or new_model(), persist=True)
+    print(f"{len(issues)} anomalie(s) détectée(s), total historique : "
+          f"{len(load_issues())}")
+    return 0
+
+
+def cmd_plan(_: argparse.Namespace) -> int:
+    from .audit.checklist import build_from_registry
+    p = build_from_registry()
+    print(f"Checklist écrite : {p}")
+    return 0
+
+
+def cmd_verify(args: argparse.Namespace) -> int:
+    from .completion.gates import evaluate, evaluate_all, load_gates
+    if args.gate:
+        r = evaluate(args.gate)
+        print(f"{args.gate}: {r['verdict']} — {r.get('reason', '')}")
+        return 0 if r["verdict"] == "PASS" else 2
+    results = evaluate_all()
+    failed = [gid for gid, r in results.items() if r["verdict"] != "PASS"]
+    for gid, r in results.items():
+        print(f"  {gid:<16s} {r['verdict']}")
+    print(f"{len(results) - len(failed)}/{len(results)} gates PASS")
+    return 0 if not failed else 2
+
+
+def cmd_score(_: argparse.Namespace) -> int:
+    from .completion.gates import evaluate_all
+    from .completion.score import compute
+    results = evaluate_all(record_evidence=False)
+    passed = sum(1 for r in results.values() if r["verdict"] == "PASS")
+    ratio = 100.0 * passed / max(1, len(results))
+    s = compute({"completeness": ratio, "requirement_coverage": ratio,
+                 "verification_quality": ratio, "correctness": ratio,
+                 "consistency": ratio})
+    print(f"Score total : {s['total']}/100 sur {s['n_dimensions']} dimensions")
+    for k, v in s["dimensions"].items():
+        print(f"  {k:<24s} {v:.1f}")
+    return 0
+
+
+def cmd_improve(args: argparse.Namespace) -> int:
+    from .improvement.loop import run_bounded
+    r = run_bounded(max_iterations=args.max_iters)
+    print(f"Boucle terminée ({r['reason']}), {r['iterations']} itération(s)")
+    if r.get("best"):
+        print(f"Meilleur score : {r['best'].get('total')}")
+    return 0
+
+
+def cmd_final_audit(_: argparse.Namespace) -> int:
+    from .completion.completion_guard import evaluate
+    r = evaluate()
+    print(f"Verdict : {r['verdict']}")
+    print(f"Gates requises : {r['required_total']}, passées : {len(r['passed'])}")
+    if r["unmet"]:
+        print("Gates non satisfaites :")
+        for u in r["unmet"]:
+            print(f"  - {u['gate']}: {u['reason']}")
+    if r["contract_coverage"]["missing"]:
+        print("Exigences non couvertes :")
+        for m in r["contract_coverage"]["missing"]:
+            print(f"  - {m}")
+    return 0 if r["verdict"] == "DONE" else 2
+
+
+def _format_dispatch(op: str, path: str) -> int:
+    from .formats import get, NotAvailable
+    p = Path(path)
+    if not p.exists():
+        print(f"Fichier introuvable : {path}")
+        return 2
+    ext = p.suffix.lower().lstrip(".")
+    mapping = {"md": "markdown", "markdown": "markdown", "docx": "docx",
+               "txt": "txt"}
+    fmt = mapping.get(ext, ext)
+    try:
+        adapter = get(fmt)
+    except NotAvailable as e:
+        print(str(e))
+        return 2
+    if not adapter.implemented:
+        print(f"Format {fmt} déclaré mais non implémenté (stub).")
+        return 2
+    try:
+        result = getattr(adapter, op)(p)
+    except NotAvailable as e:
+        print(str(e))
+        return 2
+    print(json.dumps(result, ensure_ascii=False, indent=2)[:2000])
+    return 0
+
+
+def cmd_inspect(args: argparse.Namespace) -> int:
+    return _format_dispatch("inspect", args.path)
+
+
+def cmd_structure(args: argparse.Namespace) -> int:
+    return _format_dispatch("extract", args.path)
+
+
+def cmd_language(_: argparse.Namespace) -> int:
+    from .completion.gates import evaluate
+    r = evaluate("G-NOREG")
+    print(f"Langue et tests : {r['verdict']}")
+    return 0 if r["verdict"] == "PASS" else 2
+
+
+def cmd_format_cmd(args: argparse.Namespace) -> int:
+    return _format_dispatch("validate", args.path)
+
+
+def cmd_layout(args: argparse.Namespace) -> int:
+    return _format_dispatch("validate", args.path)
+
+
+def cmd_visual(_: argparse.Namespace) -> int:
+    from .completion.completion_guard import evaluate
+    r = evaluate()
+    print(f"Audit visuel (guard-based) : {r['verdict']}")
+    return 0
+
+
+def cmd_tables(args: argparse.Namespace) -> int:
+    return _format_dispatch("extract", args.path)
+
+
+def cmd_figures(args: argparse.Namespace) -> int:
+    return _format_dispatch("extract", args.path)
+
+
+def cmd_formulas(args: argparse.Namespace) -> int:
+    return _format_dispatch("extract", args.path)
+
+
+def cmd_references(args: argparse.Namespace) -> int:
+    return _format_dispatch("extract", args.path)
+
+
 # ── entry ───────────────────────────────────────────────────
 
 def build_parser() -> argparse.ArgumentParser:
@@ -177,13 +333,42 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--version", action="version", version=f"DocForge {__version__}")
     sub = p.add_subparsers(dest="command", required=False)
 
+    # NOTE: `audit` is bound to the audit engine (issue registry); the
+    # previous task-listing behavior moves to `audit-tasks`.
     for name, fn in (("init", cmd_init), ("status", cmd_status),
                      ("workers", cmd_workers), ("providers", cmd_providers),
-                     ("audit", cmd_audit), ("report", cmd_report),
+                     ("audit-tasks", cmd_audit),
+                     ("audit", cmd_audit_engine),
+                     ("report", cmd_report),
                      ("doctor", cmd_doctor), ("install", cmd_install),
-                     ("pause", cmd_pause), ("stop", cmd_stop)):
+                     ("pause", cmd_pause), ("stop", cmd_stop),
+                     ("interview", cmd_interview),
+                     ("plan", cmd_plan),
+                     ("score", cmd_score),
+                     ("visual", cmd_visual),
+                     ("final-audit", cmd_final_audit),
+                     ("language", cmd_language)):
         s = sub.add_parser(name)
         s.set_defaults(func=fn)
+
+    v = sub.add_parser("verify")
+    v.add_argument("--gate", default=None,
+                   help="ID de la gate; vide = toutes")
+    v.set_defaults(func=cmd_verify)
+
+    imp = sub.add_parser("improve")
+    imp.add_argument("--max-iters", type=int, default=3,
+                     dest="max_iters")
+    imp.set_defaults(func=cmd_improve)
+
+    for name, fn in (("inspect", cmd_inspect), ("structure", cmd_structure),
+                     ("format", cmd_format_cmd), ("layout", cmd_layout),
+                     ("tables", cmd_tables), ("figures", cmd_figures),
+                     ("formulas", cmd_formulas),
+                     ("references", cmd_references)):
+        p2 = sub.add_parser(name)
+        p2.add_argument("path")
+        p2.set_defaults(func=fn)
 
     r = sub.add_parser("run")
     r.add_argument("--budget", type=int, default=None, help="Budget en secondes")

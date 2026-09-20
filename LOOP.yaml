@@ -44,3 +44,15 @@ providers:
 report:
   path: output/DOCFORGE_REPORT.md
   language: fr
+universal_architecture:
+  version: "0.2.0"
+  doctrine: "NO CLAIM OF COMPLETION WITHOUT EVIDENCE"
+  formats:
+    implemented: [docx, txt, markdown]
+    stubs: [xlsx, pdf, pptx, html, odt, csv]
+  audit_engine: docforge.audit
+  completion_engine: docforge.completion
+  improvement_loop: docforge.improvement.loop
+  contract_path: .docforge/project/CONTRACT.yaml
+  gates_path: .docforge/completion/GATES.yaml
+  evidence_path: .docforge/completion/evidence.jsonl

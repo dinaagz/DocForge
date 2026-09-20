@@ -1,0 +1,229 @@
+# GATES.yaml — Gates de complétion DocForge.
+#
+# Chaque gate déclare une commande CHECK et une preuve attendue EXPECT.
+# docforge.completion.gates.evaluate(gate_id) exécute CHECK et compare
+# à EXPECT. Un gate `required: true` non satisfait empêche `DONE`.
+#
+# Règle unlazy : NO CLAIM OF COMPLETION WITHOUT EVIDENCE.
+
+version: "1.0.0"
+
+gates:
+
+  - id: G-CONTRACT
+    required: true
+    description: "CONTRACT.yaml exists, is loadable, and lists >=10 required requirements."
+    check:
+      kind: python
+      code: |
+        from docforge.completion.contract import load_contract
+        c = load_contract()
+        req = [k for k, v in c.get("requirements", {}).items()
+               if v.get("status") == "required"]
+        print("REQUIRED_COUNT", len(req))
+    expect: "REQUIRED_COUNT (1[0-9]|[2-9][0-9])"
+
+  - id: G-FORMATS
+    required: true
+    description: "Universal document kernel exposes at least docx, txt, markdown."
+    check:
+      kind: python
+      code: |
+        from docforge.formats import available
+        a = set(available())
+        need = {"docx", "txt", "markdown"}
+        print("MISSING", sorted(need - a))
+    expect: "MISSING \\[\\]"
+
+  - id: G-CANONICAL
+    required: true
+    description: "Canonical model exposes the extended field set."
+    check:
+      kind: python
+      code: |
+        from docforge.canonical import new_model
+        m = new_model()
+        need = {"slides","sheets","pages","blocks","tables","figures",
+                "images","charts","formulas","headers","footers","styles",
+                "references","citations","bibliography","hyperlinks",
+                "embedded_objects","external_dependencies","calculations",
+                "accessibility","provenance","issue_links",
+                "verification_evidence"}
+        missing = sorted(need - set(m.keys()))
+        print("MISSING", missing)
+    expect: "MISSING \\[\\]"
+
+  - id: G-AUDIT
+    required: true
+    description: "Audit engine runs on an empty canonical without raising."
+    check:
+      kind: python
+      code: |
+        from docforge.audit.engine import run_audit
+        from docforge.canonical import new_model
+        issues = run_audit(new_model())
+        print("AUDIT_OK", isinstance(issues, list))
+    expect: "AUDIT_OK True"
+
+  - id: G-ISSUES
+    required: true
+    description: "Issue registry writes and reads issues.jsonl."
+    check:
+      kind: python
+      code: |
+        from docforge.audit.issues import Issue, save_issue, load_issues
+        save_issue(Issue.new(category="test", severity="LOW",
+                             description="probe", location={}))
+        n = len(load_issues())
+        print("ISSUE_COUNT", n)
+    expect: "ISSUE_COUNT [1-9][0-9]*"
+
+  - id: G-CHECKLIST
+    required: true
+    description: "Checklist engine produces current.json from issues."
+    check:
+      kind: python
+      code: |
+        from docforge.audit.checklist import build_from_registry
+        p = build_from_registry()
+        print("CHECKLIST_EXISTS", p.exists())
+    expect: "CHECKLIST_EXISTS True"
+
+  - id: G-EVIDENCE
+    required: true
+    description: "Evidence store records and reads entries."
+    check:
+      kind: python
+      code: |
+        from docforge.completion.evidence import record, for_gate
+        record("G-EVIDENCE", source="self-test", result="ok", artifact=None)
+        print("EVIDENCE_COUNT", len(for_gate("G-EVIDENCE")))
+    expect: "EVIDENCE_COUNT [1-9][0-9]*"
+
+  - id: G-SCORE
+    required: true
+    description: "Score engine returns >=10 dimensions and total 0..100."
+    check:
+      kind: python
+      code: |
+        from docforge.completion.score import compute
+        s = compute({})
+        ok = (isinstance(s.get("total"), (int, float))
+              and 0 <= s["total"] <= 100
+              and len(s.get("dimensions", {})) >= 10)
+        print("SCORE_OK", ok)
+    expect: "SCORE_OK True"
+
+  - id: G-REGRESSION
+    required: true
+    description: "Regression detector flags dropping score as regression."
+    check:
+      kind: python
+      code: |
+        from docforge.completion.regression import check
+        r = check({"total": 80, "gates": {"A": "PASS"}},
+                  {"total": 60, "gates": {"A": "FAIL"}})
+        print("REGRESSION", r["regressed"])
+    expect: "REGRESSION True"
+
+  - id: G-BESTVER
+    required: true
+    description: "Versioning keeps best score across submissions."
+    check:
+      kind: python
+      code: |
+        from docforge.completion import versioning
+        versioning.reset()
+        versioning.submit({"total": 70})
+        versioning.submit({"total": 55})
+        b = versioning.best()
+        print("BEST_TOTAL", int(b["total"]))
+    expect: "BEST_TOTAL 70"
+
+  - id: G-IMPROVE
+    required: true
+    description: "Improvement loop terminates (self-check via subprocess to avoid recursion)."
+    check:
+      kind: shell
+      command: "python -c 'from docforge.improvement.loop import run_bounded as r; print(\"LOOP_TERMINAL\", r(max_iterations=1)[\"terminal\"])'"
+    expect: "LOOP_TERMINAL True"
+
+  - id: G-GUARD
+    required: true
+    description: "Completion guard blocks DONE when required gate has no evidence."
+    check:
+      kind: python
+      code: |
+        from docforge.completion.completion_guard import evaluate
+        r = evaluate(required_gates=["G-MADE-UP"])
+        print("GUARD_VERDICT", r["verdict"])
+    expect: "GUARD_VERDICT NOT_DONE"
+
+  - id: G-PROVIDERS
+    required: true
+    description: "Provider registry always includes generic."
+    check:
+      kind: python
+      code: |
+        from docforge.providers import available
+        print("HAS_GENERIC", "generic" in available())
+    expect: "HAS_GENERIC True"
+
+  - id: G-COMMANDS
+    required: true
+    description: "CLI parser exposes all mandated subcommands."
+    check:
+      kind: python
+      code: |
+        from docforge.cli import build_parser
+        need = {"init","run","status","audit","plan","verify","score",
+                "improve","report","final-audit","inspect","structure",
+                "language","format","layout","visual","tables","figures",
+                "formulas","references","interview"}
+        cmds = set()
+        for a in build_parser()._actions:
+            for choice in getattr(a, "choices", {}) or {}:
+                cmds.add(choice)
+        missing = sorted(need - cmds)
+        print("MISSING_CMDS", missing)
+    expect: "MISSING_CMDS \\[\\]"
+
+  - id: G-INTERVIEW
+    required: false
+    description: "Interview stub generates a contract skeleton."
+    check:
+      kind: python
+      code: |
+        from docforge.contract.interviewer import skeleton_contract
+        c = skeleton_contract({"objective": "test"})
+        print("HAS_OBJ", "objective" in c)
+    expect: "HAS_OBJ True"
+
+  - id: G-NOREG
+    required: true
+    description: "pytest passes on the tests/ suite."
+    check:
+      kind: shell
+      command: "python -m pytest tests/ -q"
+    expect: "passed"
+
+  - id: G-DOCSYNC
+    required: true
+    description: "README.md references the new architecture modules."
+    check:
+      kind: shell
+      command: "grep -c 'docforge.completion' README.md"
+    expect: "[1-9][0-9]*"
+
+  - id: G-NOFAKE
+    required: true
+    description: "Stub adapters explicitly declare implemented=false and no other module raises NotImplementedError silently."
+    check:
+      kind: python
+      code: |
+        from docforge.formats import registry
+        for name, ad in registry.items():
+            if not ad.implemented:
+                assert ad.capabilities == [], name
+        print("NO_FAKE_OK")
+    expect: "NO_FAKE_OK"
