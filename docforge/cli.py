@@ -1,7 +1,7 @@
 """DocForge CLI — the unique user entry point.
 
 Commands: init, run, status, workers, providers, audit, report,
-resume, pause, stop, reset, doctor, install.
+resume, pause, stop, reset, doctor, install, update.
 """
 from __future__ import annotations
 
@@ -156,6 +156,76 @@ def cmd_install(_: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_update(args: argparse.Namespace) -> int:
+    import subprocess
+    check_only = getattr(args, "check", False)
+
+    # Fetch latest from remote
+    r = subprocess.run(["git", "fetch", "origin"], capture_output=True, text=True, cwd=str(ROOT))
+    if r.returncode != 0:
+        print(f"Erreur fetch : {r.stderr.strip()}")
+        return 1
+
+    # Detect default branch
+    r_head = subprocess.run(
+        ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
+        capture_output=True, text=True, cwd=str(ROOT))
+    if r_head.returncode == 0:
+        default_branch = r_head.stdout.strip().split("/")[-1]
+    else:
+        default_branch = "main"
+
+    # Compare local vs remote
+    local = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        capture_output=True, text=True, cwd=str(ROOT)).stdout.strip()
+    remote = subprocess.run(
+        ["git", "rev-parse", f"origin/{default_branch}"],
+        capture_output=True, text=True, cwd=str(ROOT)).stdout.strip()
+
+    if local == remote:
+        print(f"DocForge {__version__} — déjà à jour.")
+        return 0
+
+    # Count commits behind
+    behind = subprocess.run(
+        ["git", "rev-list", "--count", f"HEAD..origin/{default_branch}"],
+        capture_output=True, text=True, cwd=str(ROOT))
+    n = behind.stdout.strip() if behind.returncode == 0 else "?"
+
+    if check_only:
+        print(f"DocForge {__version__} — {n} commit(s) en retard sur origin/{default_branch}.")
+        print(f"  Local  : {local[:10]}")
+        print(f"  Remote : {remote[:10]}")
+        print("Lancez `docforge update` pour mettre à jour.")
+        return 0
+
+    # Pull updates
+    current_branch = subprocess.run(
+        ["git", "branch", "--show-current"],
+        capture_output=True, text=True, cwd=str(ROOT)).stdout.strip()
+
+    r_pull = subprocess.run(
+        ["git", "pull", "origin", current_branch or default_branch],
+        capture_output=True, text=True, cwd=str(ROOT))
+    if r_pull.returncode != 0:
+        print(f"Erreur pull : {r_pull.stderr.strip()}")
+        return 1
+
+    # Read new version
+    try:
+        from importlib import reload
+        import docforge as _df
+        reload(_df)
+        new_ver = _df.__version__
+    except Exception:
+        new_ver = "?"
+
+    print(f"DocForge mis à jour : {__version__} → {new_ver}")
+    print(r_pull.stdout.strip())
+    return 0
+
+
 def cmd_pause(_: argparse.Namespace) -> int:
     store.update("system", status="PAUSED")
     print("En pause. Utilisez `docforge run` pour reprendre.")
@@ -196,6 +266,10 @@ def build_parser() -> argparse.ArgumentParser:
     rst = sub.add_parser("reset")
     rst.add_argument("--force", action="store_true")
     rst.set_defaults(func=cmd_reset)
+
+    upd = sub.add_parser("update")
+    upd.add_argument("--check", action="store_true", help="Vérifier sans mettre à jour")
+    upd.set_defaults(func=cmd_update)
 
     return p
 
