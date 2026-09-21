@@ -6,6 +6,7 @@ side-effect-free until `run_audit(..., persist=True)` is used.
 """
 from __future__ import annotations
 
+import re
 from typing import Any, Callable, Dict, List
 
 from ..events import emit
@@ -85,8 +86,92 @@ def _probe_accessibility(model: Dict[str, Any]) -> List[Issue]:
     return out
 
 
+# ── content probes ───────────────────────────────────────────
+
+def _paragraphs(model: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return [p for p in (model.get("paragraphs") or [])
+            if (p.get("content") or "").strip()]
+
+
+def _probe_double_spaces(model: Dict[str, Any]) -> List[Issue]:
+    hits = [p["id"] for p in _paragraphs(model) if "  " in p["content"]]
+    if not hits:
+        return []
+    return [Issue.new(
+        category="typography", severity="MEDIUM",
+        description=f"double spaces in {len(hits)} paragraph(s)",
+        location={"paragraph_ids": hits[:10], "total": len(hits)},
+        recommended_action="replace double spaces with single spaces")]
+
+
+def _probe_french_nbsp(model: Dict[str, Any]) -> List[Issue]:
+    if (model.get("language") or "fr") not in ("fr", "fr_FR"):
+        return []
+    pat = re.compile(r" [?!:;]|[0-9] ?%|[0-9] ?€")
+    hits = [p["id"] for p in _paragraphs(model) if pat.search(p["content"])]
+    if not hits:
+        return []
+    return [Issue.new(
+        category="typography", severity="MEDIUM",
+        description=f"missing non-breaking spaces before punctuation in {len(hits)} paragraph(s)",
+        location={"paragraph_ids": hits[:10], "total": len(hits)},
+        recommended_action="insert nbsp before ? ! : ; and after numbers before % €")]
+
+
+def _probe_straight_quotes(model: Dict[str, Any]) -> List[Issue]:
+    hits = [p["id"] for p in _paragraphs(model)
+            if '"' in p["content"] or "'" in p["content"]]
+    if not hits:
+        return []
+    sev = "MEDIUM" if (model.get("language") or "").startswith("fr") else "LOW"
+    return [Issue.new(
+        category="typography", severity=sev,
+        description=f"straight quotes in {len(hits)} paragraph(s)",
+        location={"paragraph_ids": hits[:10], "total": len(hits)},
+        recommended_action="replace straight quotes with typographic quotes (« » or guillemets)")]
+
+
+def _probe_lowercase_start(model: Dict[str, Any]) -> List[Issue]:
+    hits = [p["id"] for p in _paragraphs(model)
+            if len(p["content"]) > 30 and p["content"][0].islower()]
+    if not hits:
+        return []
+    return [Issue.new(
+        category="typography", severity="LOW",
+        description=f"{len(hits)} paragraph(s) start with a lowercase letter",
+        location={"paragraph_ids": hits[:10], "total": len(hits)},
+        recommended_action="capitalize first letter of paragraphs")]
+
+
+def _probe_empty_paragraphs(model: Dict[str, Any]) -> List[Issue]:
+    all_paras = model.get("paragraphs") or []
+    empty = [p["id"] for p in all_paras if not (p.get("content") or "").strip()]
+    if len(empty) <= 5:
+        return []
+    return [Issue.new(
+        category="structure", severity="LOW",
+        description=f"{len(empty)} empty paragraph(s) detected (possible extra blank lines)",
+        location={"total": len(empty)},
+        recommended_action="remove excessive blank paragraphs")]
+
+
+def _probe_trailing_spaces(model: Dict[str, Any]) -> List[Issue]:
+    hits = [p["id"] for p in _paragraphs(model)
+            if p["content"] != p["content"].rstrip()]
+    if not hits:
+        return []
+    return [Issue.new(
+        category="typography", severity="LOW",
+        description=f"trailing whitespace in {len(hits)} paragraph(s)",
+        location={"paragraph_ids": hits[:10], "total": len(hits)},
+        recommended_action="strip trailing whitespace")]
+
+
 for _p in (_probe_metadata, _probe_structure, _probe_language,
-           _probe_accessibility):
+           _probe_accessibility,
+           _probe_double_spaces, _probe_french_nbsp,
+           _probe_straight_quotes, _probe_lowercase_start,
+           _probe_empty_paragraphs, _probe_trailing_spaces):
     register_probe(_p)
 
 
