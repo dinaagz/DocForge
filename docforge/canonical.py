@@ -100,6 +100,8 @@ def build_from_inspection() -> Dict[str, Any]:
     """
     ensure_layout()
     insp = WORK_DIR / "inspection" / "paragraphs.json"
+    if not insp.exists():
+        insp = WORK_DIR / "inspection" / "document_manifest.json"
     struct = WORK_DIR / "inspection" / "structure_proposal.json"
 
     paragraphs: List[Dict[str, Any]] = []

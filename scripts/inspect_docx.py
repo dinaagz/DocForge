@@ -197,6 +197,17 @@ def main() -> int:
     with open(out, "w", encoding="utf-8") as fh:
         json.dump(manifest, fh, ensure_ascii=False, indent=2)
 
+    # Write paragraphs.json with full text (used by canonical builder)
+    import docx as _docx_mod
+    _doc = _docx_mod.Document(str(docx_path))
+    full_paragraphs = [
+        {"id": paragraph_id(i), "text": p.text, "style": p.style.name if p.style else "Normal"}
+        for i, p in enumerate(_doc.paragraphs)
+    ]
+    paras_out = WORK_DIR / "inspection" / "paragraphs.json"
+    with open(paras_out, "w", encoding="utf-8") as fh:
+        json.dump({"paragraphs": full_paragraphs}, fh, ensure_ascii=False, indent=2)
+
     log_event("INSPECTION_COMPLETE",
               paragraphs=manifest["statistics"]["paragraph_count"],
               headings=manifest["statistics"]["heading_count"])
