@@ -1,11 +1,11 @@
-# DocForge — installe les slash commands Claude Code dans le profil utilisateur
-# Usage : .\install-commands.ps1
+# DocForge - installe les slash commands Claude Code dans le profil utilisateur
+# Usage : powershell -ExecutionPolicy Bypass -File install-commands.ps1
 # A relancer apres chaque mise a jour de DocForge
 
 $dest = "$env:USERPROFILE\.claude\commands"
 $src  = "$PSScriptRoot\.claude\commands"
 
-Write-Host "DocForge — installation des commandes Claude Code" -ForegroundColor Cyan
+Write-Host "DocForge - installation des commandes Claude Code" -ForegroundColor Cyan
 Write-Host "Source      : $src"
 Write-Host "Destination : $dest"
 Write-Host ""
