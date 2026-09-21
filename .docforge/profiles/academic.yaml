@@ -6,7 +6,5 @@ style:
   formality: élevée
   audience: universitaire
   preserve_author_voice: true
-formatting:
-  font: {family: "Times New Roman", size: 12}
-  paragraph: {alignment: justify, line_spacing: 1.25}
-  margins: {top_cm: 2.5, bottom_cm: 2.5, left_cm: 2.5, right_cm: 2.5}
+processing:
+  concurrency: 4

@@ -4,6 +4,3 @@ style:
   voice: institutionnel
   formality: élevée
   audience: dirigeants
-formatting:
-  font: {family: "Calibri", size: 11}
-  paragraph: {alignment: left, line_spacing: 1.15}
