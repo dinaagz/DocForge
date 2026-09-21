@@ -9,6 +9,12 @@
 .docforge/scores/*.json
 !.docforge/scores/best/
 
+# Input documents (fichiers source — ne pas versionner)
+input/*.docx
+input/*.pdf
+input/*.odt
+!input/.gitkeep
+
 # Legacy Loop
 state/*.json
 !state/loop_state.example.json
